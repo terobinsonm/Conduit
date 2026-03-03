@@ -30,6 +30,7 @@ export async function POST(
 
     // Upload to Vercel Blob
     const blob = await put(filename, file, {
+      access: "public",
       addRandomSuffix: false,
     });
 
