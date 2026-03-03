@@ -45,6 +45,7 @@ export default function SyncSchedulePage() {
   const params = useParams();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [customFields, setCustomFields] = useState<Set<string>>(new Set());
   const [schedule, setSchedule] = useState<SyncSchedule>({
     optionsCron: "",
     sizingCron: "",
@@ -67,6 +68,15 @@ export default function SyncSchedulePage() {
         const data = await res.json();
         if (data) {
           setSchedule(data);
+          // Mark any non-preset values as custom
+          const customs = new Set<string>();
+          ENTITIES.forEach((entity) => {
+            const value = data[entity.key];
+            if (value && !CRON_PRESETS.some((p) => p.value === value)) {
+              customs.add(entity.key);
+            }
+          });
+          setCustomFields(customs);
         }
       }
     } catch (error) {
@@ -103,7 +113,17 @@ export default function SyncSchedulePage() {
   }
 
   function handleCronChange(key: string, value: string) {
-    setSchedule((prev) => ({ ...prev, [key]: value === "custom" ? prev[key as keyof SyncSchedule] || "" : value }));
+    if (value === "custom") {
+      setCustomFields((prev) => new Set(prev).add(key));
+      setSchedule((prev) => ({ ...prev, [key]: "" }));
+    } else {
+      setCustomFields((prev) => {
+        const next = new Set(prev);
+        next.delete(key);
+        return next;
+      });
+      setSchedule((prev) => ({ ...prev, [key]: value }));
+    }
   }
 
   if (loading) {
@@ -176,7 +196,8 @@ export default function SyncSchedulePage() {
           <div className="space-y-6">
             {ENTITIES.map((entity) => {
               const currentValue = schedule[entity.key as keyof SyncSchedule] as string || "";
-              const isPreset = CRON_PRESETS.some((p) => p.value === currentValue);
+              const isPreset = CRON_PRESETS.some((p) => p.value === currentValue && p.value !== "custom");
+              const isCustom = customFields.has(entity.key);
               const lastSync = schedule[entity.lastKey as keyof SyncSchedule] as string | undefined;
 
               return (
@@ -190,7 +211,7 @@ export default function SyncSchedulePage() {
                   </div>
                   <div className="flex gap-2">
                     <select
-                      value={isPreset ? currentValue : "custom"}
+                      value={isCustom ? "custom" : (isPreset ? currentValue : (currentValue ? "custom" : ""))}
                       onChange={(e) => handleCronChange(entity.key, e.target.value)}
                       className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-gray-900"
                     >
@@ -201,17 +222,17 @@ export default function SyncSchedulePage() {
                         </option>
                       ))}
                     </select>
-                    {(!isPreset && currentValue) || currentValue === "custom" ? (
+                    {(isCustom || (!isPreset && currentValue)) && (
                       <input
                         type="text"
-                        value={currentValue === "custom" ? "" : currentValue}
+                        value={currentValue}
                         onChange={(e) =>
                           setSchedule((prev) => ({ ...prev, [entity.key]: e.target.value }))
                         }
                         placeholder="0 6 * * *"
                         className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-gray-900 font-mono"
                       />
-                    ) : null}
+                    )}
                   </div>
                 </div>
               );
