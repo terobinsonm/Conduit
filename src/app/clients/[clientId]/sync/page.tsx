@@ -34,9 +34,9 @@ export default function SyncPage() {
         ...prev,
         [entity]: {
           success: result.success,
-          message: result.success
-            ? `Synced ${result.recordCount} records`
-            : result.error || "Sync failed",
+message: result.success
+  ? `Synced ${result.recordCount} records`
+  : `${result.error || "Sync failed"}${result.details ? `: ${JSON.stringify(result.details)}` : ""}`,
         },
       }));
     } catch {
