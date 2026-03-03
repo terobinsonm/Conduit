@@ -11,6 +11,7 @@ import {
   Package,
   Trash2,
 } from "lucide-react";
+import { ClassificationCombobox } from "../_components/classification-combobox";
 
 interface ProductOption {
   name: string;
