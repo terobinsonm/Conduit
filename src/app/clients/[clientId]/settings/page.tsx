@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Save, TestTube, Loader2 } from "lucide-react";
+import Link from "next/link";
+import { Save, TestTube, Loader2, Clock } from "lucide-react";
 
 interface Client {
   id: string;
@@ -379,6 +381,25 @@ export default function SettingsPage() {
                 Images will be uploaded as {"{productNumber}.jpg"} in this directory
               </p>
             </div>
+          </div>
+        </section>
+
+        {/* Sync Schedule */}
+        <section className="bg-white rounded-lg border p-6">
+          <div className="flex justify-between items-center">
+            <div>
+              <h3 className="font-semibold">Sync Schedule</h3>
+              <p className="text-sm text-muted-foreground">
+                Configure automatic sync schedules for each entity
+              </p>
+            </div>
+            <Link
+              href={`/clients/${params.clientId}/settings/sync-schedule`}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 text-sm font-medium"
+            >
+              <Clock className="h-4 w-4" />
+              Configure Schedule
+            </Link>
           </div>
         </section>
 
