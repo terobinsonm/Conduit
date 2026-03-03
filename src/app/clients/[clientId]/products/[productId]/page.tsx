@@ -5,11 +5,11 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   ArrowLeft,
-  Plus,
   X,
   Loader2,
   Package,
   Trash2,
+  Upload,
 } from "lucide-react";
 import { ClassificationCombobox } from "../_components/classification-combobox";
 
@@ -74,30 +74,27 @@ export default function EditProductPage() {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [options, setOptions] = useState<Option[]>([]);
   const [loading, setLoading] = useState(true);
   const [product, setProduct] = useState<Product | null>(null);
 
-  // Basic info
   const [productNumber, setProductNumber] = useState("");
   const [productName, setProductName] = useState("");
   const [shortDescription, setShortDescription] = useState("");
   const [longDescription, setLongDescription] = useState("");
 
-  // Pricing
   const [wholesalePrice, setWholesalePrice] = useState("");
   const [retailPrice, setRetailPrice] = useState("");
   const [discountedPrice, setDiscountedPrice] = useState("");
   const [standardCost, setStandardCost] = useState("");
 
-  // Classification
   const [seasonCode, setSeasonCode] = useState("");
   const [colorCode, setColorCode] = useState("");
   const [genderCode, setGenderCode] = useState("");
   const [categoryCode, setCategoryCode] = useState("");
   const [divisionCode, setDivisionCode] = useState("");
 
-  // Organization
   const [brandCode, setBrandCode] = useState("CC");
   const [catalogCode, setCatalogCode] = useState("");
   const [dimensionCode, setDimensionCode] = useState("");
@@ -105,21 +102,17 @@ export default function EditProductPage() {
   const [styleGroupCode, setStyleGroupCode] = useState("");
   const [productType, setProductType] = useState("2");
 
-  // Settings
   const [enabled, setEnabled] = useState(true);
   const [weight, setWeight] = useState("");
   const [ignoreDiscounts, setIgnoreDiscounts] = useState(false);
 
-  // Flexible options
   const [productOptions, setProductOptions] = useState<ProductOption[]>([]);
   const [newOptionName, setNewOptionName] = useState("");
 
-  // Inventory
   const [inventory, setInventory] = useState<InventoryRecord[]>([]);
   const [bulkQty, setBulkQty] = useState("");
   const [bulkDate, setBulkDate] = useState(new Date().toISOString().split("T")[0]);
 
-  // New option creation
   const [newOptions, setNewOptions] = useState<{ elementType: string; keyCode: string; stringValue: string }[]>([]);
 
   useEffect(() => {
@@ -280,6 +273,50 @@ export default function EditProductPage() {
     });
   }
 
+  async function handleImageUpload(file: File) {
+    if (!product) return;
+    setUploading(true);
+
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("productId", product.id);
+
+    try {
+      const res = await fetch(`/api/clients/${params.clientId}/images`, {
+        method: "POST",
+        body: formData,
+      });
+
+      if (res.ok) {
+        const { url } = await res.json();
+        setProduct({ ...product, imageUrl: url });
+      } else {
+        alert("Failed to upload image");
+      }
+    } catch {
+      alert("Failed to upload image");
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  async function handleImageDelete() {
+    if (!product || !confirm("Delete this image?")) return;
+
+    try {
+      const res = await fetch(`/api/clients/${params.clientId}/images`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ productId: product.id }),
+      });
+      if (res.ok) {
+        setProduct({ ...product, imageUrl: null });
+      }
+    } catch {
+      alert("Failed to delete image");
+    }
+  }
+
   const seasons = options.filter((o) => o.elementType === "Season");
   const colors = options.filter((o) => o.elementType === "Color");
   const genders = options.filter((o) => o.elementType === "Gender");
@@ -338,7 +375,7 @@ export default function EditProductPage() {
         const error = await res.json();
         alert(error.error || "Failed to update product");
       }
-    } catch (error) {
+    } catch {
       alert("Failed to update product");
     } finally {
       setSaving(false);
@@ -346,9 +383,7 @@ export default function EditProductPage() {
   }
 
   async function handleDelete() {
-    if (!confirm(`Delete "${productNumber}"? This will also delete all inventory records. This cannot be undone.`)) {
-      return;
-    }
+    if (!confirm(`Delete "${productNumber}"? This cannot be undone.`)) return;
 
     setDeleting(true);
     try {
@@ -390,10 +425,7 @@ export default function EditProductPage() {
     <form onSubmit={handleSubmit} className="max-w-6xl mx-auto pb-20">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-4">
-          <Link
-            href={`/clients/${params.clientId}/products`}
-            className="p-2 hover:bg-gray-100 rounded-lg"
-          >
+          <Link href={`/clients/${params.clientId}/products`} className="p-2 hover:bg-gray-100 rounded-lg">
             <ArrowLeft className="h-5 w-5" />
           </Link>
           <h1 className="text-xl font-semibold text-gray-900">{product.productNumber}</h1>
@@ -408,10 +440,7 @@ export default function EditProductPage() {
             {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
             Delete
           </button>
-          <Link
-            href={`/clients/${params.clientId}/products`}
-            className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg"
-          >
+          <Link href={`/clients/${params.clientId}/products`} className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg">
             Discard
           </Link>
           <button
@@ -438,7 +467,7 @@ export default function EditProductPage() {
                   type="text"
                   value={productNumber}
                   onChange={(e) => setProductNumber(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-gray-900 focus:border-gray-900"
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-gray-900"
                   required
                 />
               </div>
@@ -448,7 +477,7 @@ export default function EditProductPage() {
                   type="text"
                   value={productName}
                   onChange={(e) => setProductName(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-gray-900 focus:border-gray-900"
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-gray-900"
                 />
               </div>
               <div>
@@ -457,7 +486,7 @@ export default function EditProductPage() {
                   type="text"
                   value={shortDescription}
                   onChange={(e) => setShortDescription(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-gray-900 focus:border-gray-900"
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-gray-900"
                 />
               </div>
               <div>
@@ -466,7 +495,7 @@ export default function EditProductPage() {
                   value={longDescription}
                   onChange={(e) => setLongDescription(e.target.value)}
                   rows={3}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-gray-900 focus:border-gray-900"
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-gray-900"
                 />
               </div>
             </div>
@@ -474,11 +503,44 @@ export default function EditProductPage() {
 
           <div className="bg-white border border-gray-200 rounded-lg p-6">
             <h2 className="text-sm font-semibold text-gray-900 mb-4">Media</h2>
-            <div className="border-2 border-dashed border-gray-200 rounded-lg p-8 text-center">
-              <Package className="h-10 w-10 mx-auto text-gray-300 mb-3" />
-              <p className="text-sm text-gray-500 mb-1">Image upload coming soon</p>
-              <p className="text-xs text-gray-400">Will be saved as {productNumber || "PRODUCT_NUMBER"}.jpg</p>
-            </div>
+            {product.imageUrl ? (
+              <div className="relative">
+                <img
+                  src={product.imageUrl}
+                  alt={productNumber}
+                  className="w-full h-64 object-contain rounded-lg border border-gray-200"
+                />
+                <button
+                  type="button"
+                  onClick={handleImageDelete}
+                  className="absolute top-2 right-2 p-2 bg-white rounded-full shadow hover:bg-red-50"
+                >
+                  <X className="h-4 w-4 text-red-500" />
+                </button>
+              </div>
+            ) : (
+              <label className="border-2 border-dashed border-gray-200 rounded-lg p-8 text-center block cursor-pointer hover:border-gray-300">
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleImageUpload(file);
+                  }}
+                  disabled={uploading}
+                />
+                {uploading ? (
+                  <Loader2 className="h-10 w-10 mx-auto text-gray-400 animate-spin mb-3" />
+                ) : (
+                  <Upload className="h-10 w-10 mx-auto text-gray-300 mb-3" />
+                )}
+                <p className="text-sm text-gray-500 mb-1">
+                  {uploading ? "Uploading..." : "Click to upload image"}
+                </p>
+                <p className="text-xs text-gray-400">Will be saved as {productNumber}.jpg</p>
+              </label>
+            )}
           </div>
 
           <div className="bg-white border border-gray-200 rounded-lg p-6">
@@ -495,7 +557,7 @@ export default function EditProductPage() {
                     step="0.01"
                     value={wholesalePrice}
                     onChange={(e) => setWholesalePrice(e.target.value)}
-                    className="w-full pl-7 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-gray-900 focus:border-gray-900"
+                    className="w-full pl-7 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-gray-900"
                     required
                   />
                 </div>
@@ -509,7 +571,7 @@ export default function EditProductPage() {
                     step="0.01"
                     value={retailPrice}
                     onChange={(e) => setRetailPrice(e.target.value)}
-                    className="w-full pl-7 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-gray-900 focus:border-gray-900"
+                    className="w-full pl-7 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-gray-900"
                   />
                 </div>
               </div>
@@ -522,7 +584,7 @@ export default function EditProductPage() {
                     step="0.01"
                     value={discountedPrice}
                     onChange={(e) => setDiscountedPrice(e.target.value)}
-                    className="w-full pl-7 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-gray-900 focus:border-gray-900"
+                    className="w-full pl-7 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-gray-900"
                   />
                 </div>
               </div>
@@ -535,7 +597,7 @@ export default function EditProductPage() {
                     step="0.01"
                     value={standardCost}
                     onChange={(e) => setStandardCost(e.target.value)}
-                    className="w-full pl-7 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-gray-900 focus:border-gray-900"
+                    className="w-full pl-7 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-gray-900"
                   />
                 </div>
               </div>
@@ -748,12 +810,12 @@ export default function EditProductPage() {
                 onChange={setSeasonCode}
                 onCreateNew={(keyCode, stringValue) => {
                   setNewOptions((prev) => [
-                    ...prev.filter((o) => o.elementType !== "Season"),
+                    ...prev.filter((o) => o.elementType !== "Season" || o.keyCode !== keyCode),
                     { elementType: "Season", keyCode, stringValue },
                   ]);
                 }}
                 placeholder="Select or create season..."
-                  multiple={true}
+                multiple={true}
               />
               <ClassificationCombobox
                 label="Color"
@@ -762,7 +824,7 @@ export default function EditProductPage() {
                 onChange={setColorCode}
                 onCreateNew={(keyCode, stringValue) => {
                   setNewOptions((prev) => [
-                    ...prev.filter((o) => o.elementType !== "Color"),
+                    ...prev.filter((o) => o.elementType !== "Color" || o.keyCode !== keyCode),
                     { elementType: "Color", keyCode, stringValue },
                   ]);
                 }}
@@ -775,7 +837,7 @@ export default function EditProductPage() {
                 onChange={setGenderCode}
                 onCreateNew={(keyCode, stringValue) => {
                   setNewOptions((prev) => [
-                    ...prev.filter((o) => o.elementType !== "Gender"),
+                    ...prev.filter((o) => o.elementType !== "Gender" || o.keyCode !== keyCode),
                     { elementType: "Gender", keyCode, stringValue },
                   ]);
                 }}
@@ -788,7 +850,7 @@ export default function EditProductPage() {
                 onChange={setCategoryCode}
                 onCreateNew={(keyCode, stringValue) => {
                   setNewOptions((prev) => [
-                    ...prev.filter((o) => o.elementType !== "ProductCategory"),
+                    ...prev.filter((o) => o.elementType !== "ProductCategory" || o.keyCode !== keyCode),
                     { elementType: "ProductCategory", keyCode, stringValue },
                   ]);
                 }}
@@ -801,7 +863,7 @@ export default function EditProductPage() {
                 onChange={setDivisionCode}
                 onCreateNew={(keyCode, stringValue) => {
                   setNewOptions((prev) => [
-                    ...prev.filter((o) => o.elementType !== "Division"),
+                    ...prev.filter((o) => o.elementType !== "Division" || o.keyCode !== keyCode),
                     { elementType: "Division", keyCode, stringValue },
                   ]);
                 }}
