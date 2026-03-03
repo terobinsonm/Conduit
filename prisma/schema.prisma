@@ -1,0 +1,334 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================================
+// MULTI-TENANT CORE
+// ============================================================================
+
+model Client {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  
+  // RepSpark API Credentials
+  devClientKey        String?
+  devEnvironmentKey   String?
+  uatClientKey        String?
+  uatEnvironmentKey   String?
+  prodClientKey       String?
+  prodEnvironmentKey  String?
+  
+  // SFTP Credentials (shared across environments)
+  sftpHost            String?
+  sftpPort            Int       @default(22)
+  sftpUsername        String?
+  sftpPassword        String?
+  sftpBasePath        String?
+  
+  // Sync Configuration
+  syncEnabled         Boolean   @default(true)
+  defaultEnvironment  String    @default("dev")
+  
+  // Relationships
+  members             ClientMember[]
+  options             Option[]
+  sizeScales          SizeScale[]
+  products            Product[]
+  inventory           Inventory[]
+  customers           Customer[]
+  syncLogs            SyncLog[]
+  images              ProductImage[]
+  syncSchedule        SyncSchedule?
+  
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+}
+
+model ClientMember {
+  id        String   @id @default(cuid())
+  clientId  String
+  client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  userId    String   // Clerk user ID
+  role      String   @default("member") // owner, admin, member
+  
+  createdAt DateTime @default(now())
+  
+  @@unique([clientId, userId])
+  @@index([userId])
+}
+
+// ============================================================================
+// FOUNDATION LAYER
+// ============================================================================
+
+model Option {
+  id           String   @id @default(cuid())
+  clientId     String
+  client       Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  
+  elementType  String
+  keyCode      String
+  stringValue  String
+  stringValue2 String?
+  numericValue Float?
+  booleanValue Boolean?
+  dateValue    DateTime?
+  enabled      Boolean  @default(true)
+  
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  @@unique([clientId, elementType, keyCode])
+  @@index([clientId])
+  @@index([clientId, elementType])
+}
+
+model SizeScale {
+  id           String   @id @default(cuid())
+  clientId     String
+  client       Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  
+  code         String
+  description  String
+  brandCode    String   @default("CC")
+  divisionCode String?
+  enabled      Boolean  @default(true)
+  
+  sizes        Size[]
+  products     Product[]
+  
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  @@unique([clientId, code])
+  @@index([clientId])
+}
+
+model Size {
+  id            String    @id @default(cuid())
+  sizeScaleId   String
+  sizeScale     SizeScale @relation(fields: [sizeScaleId], references: [id], onDelete: Cascade)
+  
+  code          String
+  description   String
+  index         Int
+  sizeTypes     String?   // JSON for multi-dimensional sizing
+  enabled       Boolean   @default(true)
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  @@unique([sizeScaleId, code])
+  @@index([sizeScaleId])
+}
+
+// ============================================================================
+// BUSINESS LAYER
+// ============================================================================
+
+model Product {
+  id                   String     @id @default(cuid())
+  clientId             String
+  client               Client     @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  
+  productNumber        String
+  wholesalePrice       Float
+  
+  productName          String?
+  longDescription      String?
+  shortDescription     String?
+  retailPrice          Float      @default(0)
+  discountedPrice      Float      @default(0)
+  standardCost         Float      @default(0)
+  
+  categoryCode         String?
+  colorCode            String?
+  genderCode           String?
+  seasonCode           String?
+  divisionCode         String?
+  
+  sizeScaleId          String?
+  sizeScale            SizeScale? @relation(fields: [sizeScaleId], references: [id])
+  
+  brandCode            String     @default("CC")
+  catalogCode          String?
+  dimensionCode        String?
+  marketingSeasonCode  String?
+  styleGroupCode       String?
+  
+  productType          Int        @default(2)
+  enabled              Boolean    @default(true)
+  ignoreDiscounts      Boolean    @default(false)
+  associationsPerGroup Int        @default(0)
+  weight               Float      @default(0)
+  
+  imageUrl             String?
+  
+  inventory            Inventory[]
+  images               ProductImage[]
+  
+  createdAt            DateTime   @default(now())
+  updatedAt            DateTime   @updatedAt
+  
+  @@unique([clientId, productNumber])
+  @@index([clientId])
+  @@index([clientId, seasonCode])
+  @@index([clientId, categoryCode])
+  @@index([sizeScaleId])
+}
+
+model ProductImage {
+  id            String   @id @default(cuid())
+  clientId      String
+  client        Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  
+  productId     String?
+  product       Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+  
+  filename      String
+  sftpPath      String
+  publicUrl     String
+  mimeType      String
+  size          Int
+  
+  uploadedAt    DateTime @default(now())
+  
+  @@index([clientId])
+  @@index([productId])
+}
+
+model Inventory {
+  id                    String   @id @default(cuid())
+  clientId              String
+  client                Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  
+  productId             String
+  product               Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  
+  productNumber         String
+  sizeCode              String
+  colorCode             String?
+  genderCode            String?
+  seasonCode            String?
+  divisionCode          String?
+  brandCode             String   @default("CC")
+  dimensionCode         String?
+  productCategoryCode   String?
+  locationCode          String?
+  
+  availableDate         DateTime
+  availableQuantity     Int
+  replenishmentQuantity Int      @default(0)
+  infiniteAvailability  Boolean  @default(false)
+  committedQuantity     Int      @default(0)
+  
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  
+  @@unique([clientId, productId, sizeCode, availableDate])
+  @@index([clientId])
+  @@index([productId])
+  @@index([clientId, productNumber])
+}
+
+model Customer {
+  id                   String   @id @default(cuid())
+  clientId             String
+  client               Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  
+  customerCode         String
+  name                 String
+  isBillTo             Boolean  @default(false)
+  enabled              Boolean  @default(true)
+  storeCode            String?
+  
+  address1             String?
+  address2             String?
+  city                 String?
+  state                String?
+  zip                  String?
+  country              String   @default("US")
+  
+  phoneNumber          String?
+  faxNumber            String?
+  
+  salesPersonCode      String?
+  brandCode            String   @default("CC")
+  divisionCode         String?
+  termsCode            String?
+  shippingMethodCode   String?
+  
+  discountPercentage   Float    @default(0)
+  pricePlanCode        String?
+  customerGroupCode    String?
+  classificationCode   String?
+  channelCode          String?
+  typeCode             String?
+  buyingGroupCode      String?
+  creditStatusCode     String?
+  commissionPercentage Float    @default(0)
+  
+  dba                  String?
+  paymentsVisibility   String?
+  referenceNumber      String?
+  
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  
+  @@unique([clientId, customerCode, storeCode])
+  @@index([clientId])
+  @@index([clientId, customerCode])
+  @@index([clientId, salesPersonCode])
+}
+
+// ============================================================================
+// SYNC MANAGEMENT
+// ============================================================================
+
+model SyncLog {
+  id           String    @id @default(cuid())
+  clientId     String
+  client       Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  
+  entityType   String
+  environment  String
+  syncMode     String
+  status       String
+  recordCount  Int
+  errorMessage String?
+  errorDetails String?
+  
+  triggeredBy  String
+  
+  startedAt    DateTime  @default(now())
+  completedAt  DateTime?
+  
+  @@index([clientId])
+  @@index([clientId, entityType])
+  @@index([clientId, status])
+}
+
+model SyncSchedule {
+  id               String   @id @default(cuid())
+  clientId         String   @unique
+  client           Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  
+  optionsCron      String?
+  sizingCron       String?
+  productsCron     String?
+  inventoryCron    String?
+  customersCron    String?
+  fullSyncCron     String?
+  
+  environment      String   @default("dev")
+  enabled          Boolean  @default(true)
+  
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
