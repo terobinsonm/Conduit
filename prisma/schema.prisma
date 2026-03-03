@@ -146,17 +146,14 @@ model Product {
   retailPrice          Float      @default(0)
   discountedPrice      Float      @default(0)
   standardCost         Float      @default(0)
-
-  // ... existing fields ...
   
   // Flexible options stored as JSON
-  // Format: [{"name":"Color","values":["Red","Blue"],"isProductLevel":true},{"name":"Size","values":["S","M","L"],"isProductLevel":false}]
-  options           String?
+  options              String?
   
-  // For products generated from a "parent" product's product-level option explosion
-  parentProductId   String?
-  parentProduct     Product?  @relation("ProductVariants", fields: [parentProductId], references: [id], onDelete: SetNull)
-  colorVariants     Product[] @relation("ProductVariants")
+  // For products generated from a parent product's option explosion
+  parentProductId      String?
+  parentProduct        Product?   @relation("ProductVariants", fields: [parentProductId], references: [id], onDelete: SetNull)
+  colorVariants        Product[]  @relation("ProductVariants")
   
   categoryCode         String?
   colorCode            String?
@@ -327,20 +324,31 @@ model SyncLog {
 }
 
 model SyncSchedule {
-  id               String   @id @default(cuid())
-  clientId         String   @unique
-  client           Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  id               String    @id @default(cuid())
+  clientId         String    @unique
+  client           Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
   
+  // Cron expressions (e.g., "0 6 * * *" = daily at 6am UTC)
   optionsCron      String?
   sizingCron       String?
   productsCron     String?
   inventoryCron    String?
   customersCron    String?
+  imagesCron       String?
   fullSyncCron     String?
   
-  environment      String   @default("dev")
-  enabled          Boolean  @default(true)
+  // Last successful sync timestamps
+  lastSyncOptions   DateTime?
+  lastSyncSizing    DateTime?
+  lastSyncProducts  DateTime?
+  lastSyncInventory DateTime?
+  lastSyncCustomers DateTime?
+  lastSyncImages    DateTime?
+  lastFullSync      DateTime?
   
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  environment      String    @default("dev")
+  enabled          Boolean   @default(false)
+  
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 }
