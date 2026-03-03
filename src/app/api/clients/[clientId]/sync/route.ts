@@ -1,0 +1,108 @@
+import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/db";
+import {
+  syncToRepSpark,
+  transformOptions,
+  transformSizing,
+  transformProducts,
+  transformInventory,
+  transformCustomers,
+} from "@/lib/repspark";
+
+export async function POST(
+  request: NextRequest,
+  { params }: { params: { clientId: string } }
+) {
+  try {
+    const { entity, environment } = await request.json();
+
+    const client = await prisma.client.findUnique({
+      where: { id: params.clientId },
+    });
+
+    if (!client) {
+      return NextResponse.json({ success: false, error: "Client not found" }, { status: 404 });
+    }
+
+    let result;
+
+    switch (entity) {
+      case "options": {
+        const options = await prisma.option.findMany({
+          where: { clientId: params.clientId },
+        });
+        const payload = transformOptions(options);
+        result = await syncToRepSpark(client, environment, "option", payload);
+        break;
+      }
+
+      case "sizing": {
+        const sizeScales = await prisma.sizeScale.findMany({
+          where: { clientId: params.clientId },
+          include: { sizes: true },
+        });
+        const payload = transformSizing(sizeScales);
+        result = await syncToRepSpark(client, environment, "sizing", payload);
+        break;
+      }
+
+      case "products": {
+        const products = await prisma.product.findMany({
+          where: { clientId: params.clientId },
+        });
+        const payload = transformProducts(products);
+        result = await syncToRepSpark(client, environment, "product", payload);
+        break;
+      }
+
+      case "inventory": {
+        const inventory = await prisma.inventory.findMany({
+          where: { clientId: params.clientId },
+        });
+        const payload = transformInventory(inventory);
+        result = await syncToRepSpark(client, environment, "inventory", payload);
+        break;
+      }
+
+      case "customers": {
+        const customers = await prisma.customer.findMany({
+          where: { clientId: params.clientId },
+        });
+        const payload = transformCustomers(customers);
+        result = await syncToRepSpark(client, environment, "customer", payload);
+        break;
+      }
+
+      case "images": {
+        // Handle images sync separately - calls the images sync endpoint
+        const baseUrl = process.env.VERCEL_URL
+          ? `https://${process.env.VERCEL_URL}`
+          : request.nextUrl.origin;
+
+        const imagesResponse = await fetch(
+          `${baseUrl}/api/clients/${params.clientId}/sync/images`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+          }
+        );
+        result = await imagesResponse.json();
+        break;
+      }
+
+      default:
+        return NextResponse.json(
+          { success: false, error: `Unknown entity: ${entity}` },
+          { status: 400 }
+        );
+    }
+
+    return NextResponse.json(result);
+  } catch (error) {
+    console.error("Sync error:", error);
+    return NextResponse.json(
+      { success: false, error: "Sync failed" },
+      { status: 500 }
+    );
+  }
+}
