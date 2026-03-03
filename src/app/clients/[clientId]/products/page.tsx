@@ -12,6 +12,7 @@ import {
   Copy,
   Trash2,
 } from "lucide-react";
+import { ClassificationCombobox } from "./_components/classification-combobox";
 
 interface Product {
   id: string;
