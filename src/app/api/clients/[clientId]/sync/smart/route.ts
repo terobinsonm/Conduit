@@ -300,14 +300,13 @@ for (const [code, data] of Array.from(sizeScalesToCreate)) {
         const sizeOptions = productOptions.filter((o) => !o.isProductLevel);
 
         if (sizeOptions.length === 0) continue;
-
-        // Generate cartesian product of all size options
-        function cartesian(arrays: string[][]): string[][] {
+// Generate cartesian product of all size options
+        const cartesian = (arrays: string[][]): string[][] => {
           if (arrays.length === 0) return [[]];
           const [first, ...rest] = arrays;
           const restCartesian = cartesian(rest);
           return first.flatMap((val) => restCartesian.map((r) => [val, ...r]));
-        }
+        };
 
         const valueArrays = sizeOptions.map((o) => o.values);
         const combinations = cartesian(valueArrays);
