@@ -158,7 +158,7 @@ export async function POST(
     }
 
     // Create size scales and sizes
-    for (const [code, data] of sizeScalesToCreate) {
+for (const [code, data] of Array.from(sizeScalesToCreate)) {
       const sizeScale = await prisma.sizeScale.upsert({
         where: {
           clientId_code: {
