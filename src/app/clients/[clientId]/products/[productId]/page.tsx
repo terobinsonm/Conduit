@@ -753,6 +753,7 @@ export default function EditProductPage() {
                   ]);
                 }}
                 placeholder="Select or create season..."
+                  multiple={true}
               />
               <ClassificationCombobox
                 label="Color"
