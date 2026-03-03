@@ -9,10 +9,8 @@ import {
   X,
   Loader2,
   Package,
-  ChevronDown,
-  ChevronRight,
-  GripVertical,
 } from "lucide-react";
+import { ClassificationCombobox } from "../_components/classification-combobox";
 
 interface ProductOption {
   name: string;
@@ -86,9 +84,6 @@ export default function NewProductPage() {
   // New option creation
   const [newOptions, setNewOptions] = useState<{ elementType: string; keyCode: string; stringValue: string }[]>([]);
 
-  // Expanded sections
-  const [expandedColorGroups, setExpandedColorGroups] = useState<Set<string>>(new Set());
-
   useEffect(() => {
     fetchOptions();
   }, [params.clientId]);
@@ -100,7 +95,6 @@ export default function NewProductPage() {
     setLoading(false);
   }
 
-  // Generate variants from options
   function generateVariants(): string[] {
     const sizeLevelOptions = productOptions.filter((o) => !o.isProductLevel);
     if (sizeLevelOptions.length === 0) return [];
@@ -117,7 +111,6 @@ export default function NewProductPage() {
     return combinations.map((combo) => combo.join(" / "));
   }
 
-  // Update inventory when variants change
   useEffect(() => {
     const variants = generateVariants();
     const today = new Date().toISOString().split("T")[0];
@@ -192,34 +185,11 @@ export default function NewProductPage() {
     });
   }
 
-  // Get options by type
   const seasons = options.filter((o) => o.elementType === "Season");
   const colors = options.filter((o) => o.elementType === "Color");
   const genders = options.filter((o) => o.elementType === "Gender");
   const categories = options.filter((o) => o.elementType === "ProductCategory");
   const divisions = options.filter((o) => o.elementType === "Division");
-
-  // Handle creating new classification options
-  function handleClassificationChange(
-    elementType: string,
-    value: string,
-    setter: (v: string) => void
-  ) {
-    setter(value);
-    
-    // Check if it's a "create new" value
-    if (value.startsWith("__create__:")) {
-      const newValue = value.replace("__create__:", "");
-      const keyCode = newValue.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 10);
-      
-      // Add to newOptions for creation on save
-      setNewOptions((prev) => [
-        ...prev.filter((o) => o.elementType !== elementType),
-        { elementType, keyCode, stringValue: newValue },
-      ]);
-      setter(keyCode);
-    }
-  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -293,7 +263,6 @@ export default function NewProductPage() {
 
   return (
     <form onSubmit={handleSubmit} className="max-w-6xl mx-auto pb-20">
-      {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-4">
           <Link
@@ -323,9 +292,7 @@ export default function NewProductPage() {
       </div>
 
       <div className="grid grid-cols-3 gap-6">
-        {/* Left column - 2/3 */}
         <div className="col-span-2 space-y-6">
-          {/* Basic info */}
           <div className="bg-white border border-gray-200 rounded-lg p-6">
             <h2 className="text-sm font-semibold text-gray-900 mb-4">Basic information</h2>
             <div className="space-y-4">
@@ -376,7 +343,6 @@ export default function NewProductPage() {
             </div>
           </div>
 
-          {/* Media */}
           <div className="bg-white border border-gray-200 rounded-lg p-6">
             <h2 className="text-sm font-semibold text-gray-900 mb-4">Media</h2>
             <div className="border-2 border-dashed border-gray-200 rounded-lg p-8 text-center">
@@ -386,7 +352,6 @@ export default function NewProductPage() {
             </div>
           </div>
 
-          {/* Pricing */}
           <div className="bg-white border border-gray-200 rounded-lg p-6">
             <h2 className="text-sm font-semibold text-gray-900 mb-4">Pricing</h2>
             <div className="grid grid-cols-2 gap-4">
@@ -452,7 +417,6 @@ export default function NewProductPage() {
             </div>
           </div>
 
-          {/* Options */}
           <div className="bg-white border border-gray-200 rounded-lg p-6">
             <h2 className="text-sm font-semibold text-gray-900 mb-4">Options</h2>
             <p className="text-sm text-gray-500 mb-4">
@@ -543,7 +507,6 @@ export default function NewProductPage() {
             </div>
           </div>
 
-          {/* Inventory */}
           {variants.length > 0 && (
             <div className="bg-white border border-gray-200 rounded-lg p-6">
               <h2 className="text-sm font-semibold text-gray-900 mb-4">
@@ -636,9 +599,7 @@ export default function NewProductPage() {
           )}
         </div>
 
-        {/* Right column - 1/3 */}
         <div className="space-y-6">
-          {/* Status */}
           <div className="bg-white border border-gray-200 rounded-lg p-6">
             <h2 className="text-sm font-semibold text-gray-900 mb-4">Status</h2>
             <label className="flex items-center gap-3">
@@ -652,79 +613,78 @@ export default function NewProductPage() {
             </label>
           </div>
 
-          {/* Classification */}
           <div className="bg-white border border-gray-200 rounded-lg p-6">
             <h2 className="text-sm font-semibold text-gray-900 mb-4">Classification</h2>
             <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Season</label>
-                <select
-                  value={seasonCode}
-                  onChange={(e) => setSeasonCode(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-gray-900"
-                >
-                  <option value="">Select season</option>
-                  {seasons.map((s) => (
-                    <option key={s.id} value={s.keyCode}>{s.stringValue}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Color</label>
-                <select
-                  value={colorCode}
-                  onChange={(e) => setColorCode(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-gray-900"
-                >
-                  <option value="">Select color</option>
-                  {colors.map((c) => (
-                    <option key={c.id} value={c.keyCode}>{c.stringValue}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Gender</label>
-                <select
-                  value={genderCode}
-                  onChange={(e) => setGenderCode(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-gray-900"
-                >
-                  <option value="">Select gender</option>
-                  {genders.map((g) => (
-                    <option key={g.id} value={g.keyCode}>{g.stringValue}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
-                <select
-                  value={categoryCode}
-                  onChange={(e) => setCategoryCode(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-gray-900"
-                >
-                  <option value="">Select category</option>
-                  {categories.map((c) => (
-                    <option key={c.id} value={c.keyCode}>{c.stringValue}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Division</label>
-                <select
-                  value={divisionCode}
-                  onChange={(e) => setDivisionCode(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-gray-900"
-                >
-                  <option value="">Select division</option>
-                  {divisions.map((d) => (
-                    <option key={d.id} value={d.keyCode}>{d.stringValue}</option>
-                  ))}
-                </select>
-              </div>
+              <ClassificationCombobox
+                label="Season"
+                value={seasonCode}
+                options={seasons}
+                onChange={setSeasonCode}
+                onCreateNew={(keyCode, stringValue) => {
+                  setNewOptions((prev) => [
+                    ...prev.filter((o) => o.elementType !== "Season" || o.keyCode !== keyCode),
+                    { elementType: "Season", keyCode, stringValue },
+                  ]);
+                }}
+                placeholder="Select or create season..."
+                multiple={true}
+              />
+              <ClassificationCombobox
+                label="Color"
+                value={colorCode}
+                options={colors}
+                onChange={setColorCode}
+                onCreateNew={(keyCode, stringValue) => {
+                  setNewOptions((prev) => [
+                    ...prev.filter((o) => o.elementType !== "Color" || o.keyCode !== keyCode),
+                    { elementType: "Color", keyCode, stringValue },
+                  ]);
+                }}
+                placeholder="Select or create color..."
+              />
+              <ClassificationCombobox
+                label="Gender"
+                value={genderCode}
+                options={genders}
+                onChange={setGenderCode}
+                onCreateNew={(keyCode, stringValue) => {
+                  setNewOptions((prev) => [
+                    ...prev.filter((o) => o.elementType !== "Gender" || o.keyCode !== keyCode),
+                    { elementType: "Gender", keyCode, stringValue },
+                  ]);
+                }}
+                placeholder="Select or create gender..."
+              />
+              <ClassificationCombobox
+                label="Category"
+                value={categoryCode}
+                options={categories}
+                onChange={setCategoryCode}
+                onCreateNew={(keyCode, stringValue) => {
+                  setNewOptions((prev) => [
+                    ...prev.filter((o) => o.elementType !== "ProductCategory" || o.keyCode !== keyCode),
+                    { elementType: "ProductCategory", keyCode, stringValue },
+                  ]);
+                }}
+                placeholder="Select or create category..."
+              />
+              <ClassificationCombobox
+                label="Division"
+                value={divisionCode}
+                options={divisions}
+                onChange={setDivisionCode}
+                onCreateNew={(keyCode, stringValue) => {
+                  setNewOptions((prev) => [
+                    ...prev.filter((o) => o.elementType !== "Division" || o.keyCode !== keyCode),
+                    { elementType: "Division", keyCode, stringValue },
+                  ]);
+                }}
+                placeholder="Select or create division..."
+              />
             </div>
           </div>
 
-          {/* Organization */}
           <div className="bg-white border border-gray-200 rounded-lg p-6">
             <h2 className="text-sm font-semibold text-gray-900 mb-4">Organization</h2>
             <div className="space-y-4">
@@ -770,7 +730,6 @@ export default function NewProductPage() {
             </div>
           </div>
 
-          {/* Settings */}
           <div className="bg-white border border-gray-200 rounded-lg p-6">
             <h2 className="text-sm font-semibold text-gray-900 mb-4">Settings</h2>
             <div className="space-y-4">
