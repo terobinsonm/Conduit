@@ -114,7 +114,7 @@ export function transformProducts(products: Product[]): Record<string, unknown>[
     if (p.genderCode) record.GenderCode = p.genderCode;
     if (p.seasonCode) record.SeasonCode = p.seasonCode;
     if (p.divisionCode) record.DivisionCode = p.divisionCode;
-    if (p.sizeScale) record.SizeScaleCode = p.sizeScale.code;
+// SizeScaleCode handled separately
     if (p.catalogCode) record.CatalogCode = p.catalogCode;
     if (p.dimensionCode) record.DimensionCode = p.dimensionCode;
     if (p.marketingSeasonCode) record.MarketingSeasonCode = p.marketingSeasonCode;
