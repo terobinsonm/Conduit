@@ -57,6 +57,7 @@ export function transformOptions(options: Option[]): Record<string, unknown>[] {
     ElementType: opt.elementType,
     KeyCode: opt.keyCode,
     StringValue: opt.stringValue,
+    Description: opt.stringValue,  // Add this line
     ...(opt.stringValue2 && { StringValue2: opt.stringValue2 }),
     ...(opt.numericValue !== null && { NumericValue: opt.numericValue }),
     ...(opt.booleanValue !== null && { BooleanValue: opt.booleanValue }),
