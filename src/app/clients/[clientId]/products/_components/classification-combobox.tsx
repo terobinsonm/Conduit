@@ -28,11 +28,21 @@ export function ClassificationCombobox({
 }: ClassificationComboboxProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState("");
+  const [pendingCreate, setPendingCreate] = useState<{ keyCode: string; stringValue: string } | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const selectedOption = options.find((o) => o.keyCode === value);
-  const displayValue = selectedOption?.stringValue || "";
+  
+  // Show pending create value if it matches current value, otherwise show selected option or raw value
+  let displayValue = "";
+  if (pendingCreate && pendingCreate.keyCode === value) {
+    displayValue = pendingCreate.stringValue;
+  } else if (selectedOption) {
+    displayValue = selectedOption.stringValue;
+  } else if (value) {
+    displayValue = value;
+  }
 
   const filteredOptions = options.filter(
     (o) =>
@@ -59,6 +69,7 @@ export function ClassificationCombobox({
 
   function handleSelect(option: Option) {
     onChange(option.keyCode);
+    setPendingCreate(null);
     setIsOpen(false);
     setSearch("");
   }
@@ -69,7 +80,10 @@ export function ClassificationCombobox({
       .toUpperCase()
       .replace(/[^A-Z0-9]/g, "")
       .slice(0, 10);
-    onCreateNew(keyCode, search.trim());
+    const stringValue = search.trim();
+    
+    setPendingCreate({ keyCode, stringValue });
+    onCreateNew(keyCode, stringValue);
     onChange(keyCode);
     setIsOpen(false);
     setSearch("");
@@ -77,7 +91,9 @@ export function ClassificationCombobox({
 
   function handleClear() {
     onChange("");
+    setPendingCreate(null);
     setSearch("");
+    setIsOpen(false);
   }
 
   return (
@@ -103,10 +119,14 @@ export function ClassificationCombobox({
             onKeyDown={(e) => {
               if (e.key === "Enter") {
                 e.preventDefault();
-                if (filteredOptions.length > 0) {
+                if (filteredOptions.length > 0 && !search.trim()) {
+                  handleSelect(filteredOptions[0]);
+                } else if (filteredOptions.length === 1 && filteredOptions[0].keyCode.toLowerCase() === search.toLowerCase()) {
                   handleSelect(filteredOptions[0]);
                 } else if (search.trim() && !exactMatch) {
                   handleCreate();
+                } else if (filteredOptions.length > 0) {
+                  handleSelect(filteredOptions[0]);
                 }
               }
               if (e.key === "Escape") {
@@ -164,7 +184,7 @@ export function ClassificationCombobox({
           )}
 
           {filteredOptions.length === 0 && !search.trim() && (
-            <div className="px-3 py-2 text-sm text-gray-500">No options available</div>
+            <div className="px-3 py-2 text-sm text-gray-500">No options available. Type to create one.</div>
           )}
         </div>
       )}
