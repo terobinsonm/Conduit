@@ -140,7 +140,6 @@ export default function EditProductPage() {
     if (productRes.ok) {
       setProduct(productData);
       
-      // Populate form fields
       setProductNumber(productData.productNumber || "");
       setProductName(productData.productName || "");
       setShortDescription(productData.shortDescription || "");
@@ -164,7 +163,6 @@ export default function EditProductPage() {
       setWeight(productData.weight?.toString() || "");
       setIgnoreDiscounts(productData.ignoreDiscounts ?? false);
 
-      // Parse options
       if (productData.options) {
         try {
           setProductOptions(JSON.parse(productData.options));
@@ -173,7 +171,6 @@ export default function EditProductPage() {
         }
       }
 
-      // Parse inventory
       if (productData.inventory && Array.isArray(productData.inventory)) {
         setInventory(
           productData.inventory.map((inv: any) => ({
@@ -191,7 +188,6 @@ export default function EditProductPage() {
     setLoading(false);
   }
 
-  // Generate variants from options
   function generateVariants(): string[] {
     const sizeLevelOptions = productOptions.filter((o) => !o.isProductLevel);
     if (sizeLevelOptions.length === 0) return [];
@@ -208,7 +204,6 @@ export default function EditProductPage() {
     return combinations.map((combo) => combo.join(" / "));
   }
 
-  // Update inventory when variants change
   useEffect(() => {
     const variants = generateVariants();
     if (variants.length === 0) return;
@@ -285,7 +280,6 @@ export default function EditProductPage() {
     });
   }
 
-  // Get options by type
   const seasons = options.filter((o) => o.elementType === "Season");
   const colors = options.filter((o) => o.elementType === "Color");
   const genders = options.filter((o) => o.elementType === "Gender");
@@ -394,7 +388,6 @@ export default function EditProductPage() {
 
   return (
     <form onSubmit={handleSubmit} className="max-w-6xl mx-auto pb-20">
-      {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-4">
           <Link
@@ -433,9 +426,7 @@ export default function EditProductPage() {
       </div>
 
       <div className="grid grid-cols-3 gap-6">
-        {/* Left column - 2/3 */}
         <div className="col-span-2 space-y-6">
-          {/* Basic info */}
           <div className="bg-white border border-gray-200 rounded-lg p-6">
             <h2 className="text-sm font-semibold text-gray-900 mb-4">Basic information</h2>
             <div className="space-y-4">
@@ -481,7 +472,6 @@ export default function EditProductPage() {
             </div>
           </div>
 
-          {/* Media */}
           <div className="bg-white border border-gray-200 rounded-lg p-6">
             <h2 className="text-sm font-semibold text-gray-900 mb-4">Media</h2>
             <div className="border-2 border-dashed border-gray-200 rounded-lg p-8 text-center">
@@ -491,7 +481,6 @@ export default function EditProductPage() {
             </div>
           </div>
 
-          {/* Pricing */}
           <div className="bg-white border border-gray-200 rounded-lg p-6">
             <h2 className="text-sm font-semibold text-gray-900 mb-4">Pricing</h2>
             <div className="grid grid-cols-2 gap-4">
@@ -553,7 +542,6 @@ export default function EditProductPage() {
             </div>
           </div>
 
-          {/* Options */}
           <div className="bg-white border border-gray-200 rounded-lg p-6">
             <h2 className="text-sm font-semibold text-gray-900 mb-4">Options</h2>
             <p className="text-sm text-gray-500 mb-4">
@@ -644,7 +632,6 @@ export default function EditProductPage() {
             </div>
           </div>
 
-          {/* Inventory */}
           {variants.length > 0 && (
             <div className="bg-white border border-gray-200 rounded-lg p-6">
               <h2 className="text-sm font-semibold text-gray-900 mb-4">
@@ -737,9 +724,7 @@ export default function EditProductPage() {
           )}
         </div>
 
-        {/* Right column - 1/3 */}
         <div className="space-y-6">
-          {/* Status */}
           <div className="bg-white border border-gray-200 rounded-lg p-6">
             <h2 className="text-sm font-semibold text-gray-900 mb-4">Status</h2>
             <label className="flex items-center gap-3">
@@ -753,79 +738,77 @@ export default function EditProductPage() {
             </label>
           </div>
 
-          {/* Classification */}
           <div className="bg-white border border-gray-200 rounded-lg p-6">
             <h2 className="text-sm font-semibold text-gray-900 mb-4">Classification</h2>
             <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Season</label>
-                <select
-                  value={seasonCode}
-                  onChange={(e) => setSeasonCode(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-gray-900"
-                >
-                  <option value="">Select season</option>
-                  {seasons.map((s) => (
-                    <option key={s.id} value={s.keyCode}>{s.stringValue}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Color</label>
-                <select
-                  value={colorCode}
-                  onChange={(e) => setColorCode(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-gray-900"
-                >
-                  <option value="">Select color</option>
-                  {colors.map((c) => (
-                    <option key={c.id} value={c.keyCode}>{c.stringValue}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Gender</label>
-                <select
-                  value={genderCode}
-                  onChange={(e) => setGenderCode(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-gray-900"
-                >
-                  <option value="">Select gender</option>
-                  {genders.map((g) => (
-                    <option key={g.id} value={g.keyCode}>{g.stringValue}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
-                <select
-                  value={categoryCode}
-                  onChange={(e) => setCategoryCode(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-gray-900"
-                >
-                  <option value="">Select category</option>
-                  {categories.map((c) => (
-                    <option key={c.id} value={c.keyCode}>{c.stringValue}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Division</label>
-                <select
-                  value={divisionCode}
-                  onChange={(e) => setDivisionCode(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-gray-900"
-                >
-                  <option value="">Select division</option>
-                  {divisions.map((d) => (
-                    <option key={d.id} value={d.keyCode}>{d.stringValue}</option>
-                  ))}
-                </select>
-              </div>
+              <ClassificationCombobox
+                label="Season"
+                value={seasonCode}
+                options={seasons}
+                onChange={setSeasonCode}
+                onCreateNew={(keyCode, stringValue) => {
+                  setNewOptions((prev) => [
+                    ...prev.filter((o) => o.elementType !== "Season"),
+                    { elementType: "Season", keyCode, stringValue },
+                  ]);
+                }}
+                placeholder="Select or create season..."
+              />
+              <ClassificationCombobox
+                label="Color"
+                value={colorCode}
+                options={colors}
+                onChange={setColorCode}
+                onCreateNew={(keyCode, stringValue) => {
+                  setNewOptions((prev) => [
+                    ...prev.filter((o) => o.elementType !== "Color"),
+                    { elementType: "Color", keyCode, stringValue },
+                  ]);
+                }}
+                placeholder="Select or create color..."
+              />
+              <ClassificationCombobox
+                label="Gender"
+                value={genderCode}
+                options={genders}
+                onChange={setGenderCode}
+                onCreateNew={(keyCode, stringValue) => {
+                  setNewOptions((prev) => [
+                    ...prev.filter((o) => o.elementType !== "Gender"),
+                    { elementType: "Gender", keyCode, stringValue },
+                  ]);
+                }}
+                placeholder="Select or create gender..."
+              />
+              <ClassificationCombobox
+                label="Category"
+                value={categoryCode}
+                options={categories}
+                onChange={setCategoryCode}
+                onCreateNew={(keyCode, stringValue) => {
+                  setNewOptions((prev) => [
+                    ...prev.filter((o) => o.elementType !== "ProductCategory"),
+                    { elementType: "ProductCategory", keyCode, stringValue },
+                  ]);
+                }}
+                placeholder="Select or create category..."
+              />
+              <ClassificationCombobox
+                label="Division"
+                value={divisionCode}
+                options={divisions}
+                onChange={setDivisionCode}
+                onCreateNew={(keyCode, stringValue) => {
+                  setNewOptions((prev) => [
+                    ...prev.filter((o) => o.elementType !== "Division"),
+                    { elementType: "Division", keyCode, stringValue },
+                  ]);
+                }}
+                placeholder="Select or create division..."
+              />
             </div>
           </div>
 
-          {/* Organization */}
           <div className="bg-white border border-gray-200 rounded-lg p-6">
             <h2 className="text-sm font-semibold text-gray-900 mb-4">Organization</h2>
             <div className="space-y-4">
@@ -871,7 +854,6 @@ export default function EditProductPage() {
             </div>
           </div>
 
-          {/* Settings */}
           <div className="bg-white border border-gray-200 rounded-lg p-6">
             <h2 className="text-sm font-semibold text-gray-900 mb-4">Settings</h2>
             <div className="space-y-4">
