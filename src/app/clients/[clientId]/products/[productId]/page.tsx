@@ -1987,16 +1987,69 @@ export default function EditProductPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Image URL
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Image
                   </label>
-                  <input
-                    type="text"
-                    value={configForm.finishedGoodImageUrl}
-                    onChange={(e) => setConfigForm({ ...configForm, finishedGoodImageUrl: e.target.value })}
-                    placeholder="https://... (falls back to base product image if blank)"
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
-                  />
+                  {configForm.finishedGoodImageUrl ? (
+                    <div className="relative inline-block">
+                      <img
+                        src={configForm.finishedGoodImageUrl}
+                        alt="Finished good"
+                        className="h-32 w-32 object-contain rounded-lg border border-gray-200"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setConfigForm({ ...configForm, finishedGoodImageUrl: "" })}
+                        className="absolute -top-2 -right-2 p-1 bg-white rounded-full shadow hover:bg-red-50 border border-gray-200"
+                      >
+                        <X className="h-3 w-3 text-red-500" />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex gap-3">
+                      <label className="flex-1 border-2 border-dashed border-gray-200 rounded-lg p-4 text-center cursor-pointer hover:border-gray-300">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={async (e) => {
+                            const file = e.target.files?.[0];
+                            if (!file) return;
+                            
+                            const formData = new FormData();
+                            formData.append("file", file);
+                            formData.append("folder", "licensed");
+                            
+                            try {
+                              const res = await fetch(`/api/clients/${params.clientId}/images`, {
+                                method: "POST",
+                                body: formData,
+                              });
+                              if (res.ok) {
+                                const { url } = await res.json();
+                                setConfigForm({ ...configForm, finishedGoodImageUrl: url });
+                              } else {
+                                alert("Failed to upload image");
+                              }
+                            } catch {
+                              alert("Failed to upload image");
+                            }
+                          }}
+                        />
+                        <Upload className="h-6 w-6 mx-auto text-gray-300 mb-1" />
+                        <p className="text-xs text-gray-500">Upload image</p>
+                      </label>
+                      <div className="flex-1">
+                        <input
+                          type="text"
+                          value={configForm.finishedGoodImageUrl}
+                          onChange={(e) => setConfigForm({ ...configForm, finishedGoodImageUrl: e.target.value })}
+                          placeholder="Or paste image URL..."
+                          className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm h-full"
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div>
