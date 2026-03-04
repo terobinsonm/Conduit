@@ -96,19 +96,19 @@ export async function POST(
         );
     }
 
-    // Log the sync result
-    await prisma.syncLog.create({
-      data: {
-        clientId: params.clientId,
-        entityType,
-        environment,
-        syncMode: "Full",
-        recordCount: result.recordCount || 0,
-        success: result.success,
-        error: result.error || null,
-        details: result.details ? JSON.stringify(result.details) : null,
-      },
-    });
+// Log the sync result
+await prisma.syncLog.create({
+  data: {
+    client: { connect: { id: params.clientId } },
+    entityType,
+    environment,
+    syncMode: "Full",
+    recordCount: result.recordCount || 0,
+    success: result.success ?? false,
+    error: result.error || null,
+    details: result.details ? JSON.stringify(result.details) : null,
+  },
+});
 
     return NextResponse.json(result);
   } catch (error) {
