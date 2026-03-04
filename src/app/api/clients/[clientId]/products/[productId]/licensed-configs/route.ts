@@ -17,14 +17,83 @@ export async function POST(request: NextRequest, { params }: Params) {
 
   try {
     const body = await request.json();
+    let decorationId = body.decorationId;
+    let placementCode = body.placement;
+    let colorChoiceCode = body.colorChoice;
 
+    // Create new logo (Type 4 product) if requested
+    if (body.createNewLogo && body.newLogo) {
+      const newLogo = await prisma.product.create({
+        data: {
+          client: { connect: { id: params.clientId } },
+          productNumber: body.newLogo.productNumber,
+          productName: body.newLogo.productName,
+          productType: 4,
+          wholesalePrice: body.newLogo.wholesalePrice || 0,
+          retailPrice: body.newLogo.retailPrice || 0,
+          league: body.newLogo.league || null,
+          teamCode: body.newLogo.teamCode || null,
+          teamName: body.newLogo.teamName || null,
+          teamDescription: body.newLogo.teamDescription || null,
+          enabled: true,
+          brandCode: "CC",
+        },
+      });
+      decorationId = newLogo.id;
+    }
+
+    // Create new placement option if requested
+    if (body.createNewPlacement && body.newPlacement) {
+      await prisma.option.upsert({
+        where: {
+          clientId_elementType_keyCode: {
+            clientId: params.clientId,
+            elementType: "Placement",
+            keyCode: body.newPlacement.keyCode,
+          },
+        },
+        update: {},
+        create: {
+          clientId: params.clientId,
+          elementType: "Placement",
+          keyCode: body.newPlacement.keyCode,
+          stringValue: body.newPlacement.stringValue,
+          enabled: true,
+        },
+      });
+      placementCode = body.newPlacement.keyCode;
+    }
+
+    // Create new color choice option if requested
+    if (body.createNewColorChoice && body.newColorChoice) {
+      await prisma.option.upsert({
+        where: {
+          clientId_elementType_keyCode: {
+            clientId: params.clientId,
+            elementType: "ColorChoice",
+            keyCode: body.newColorChoice.keyCode,
+          },
+        },
+        update: {},
+        create: {
+          clientId: params.clientId,
+          elementType: "ColorChoice",
+          keyCode: body.newColorChoice.keyCode,
+          stringValue: body.newColorChoice.stringValue,
+          enabled: true,
+        },
+      });
+      colorChoiceCode = body.newColorChoice.keyCode;
+    }
+
+    // Create the licensed configuration
     const config = await prisma.licensedConfiguration.create({
       data: {
         client: { connect: { id: params.clientId } },
         product: { connect: { id: params.productId } },
-        decoration: { connect: { id: body.decorationId } },
-        placement: body.placement,
-        colorChoice: body.colorChoice,
+        decoration: { connect: { id: decorationId } },
+        placement: placementCode,
+        colorChoice: colorChoiceCode,
         finishedGoodName: body.finishedGoodName || null,
         finishedGoodImageUrl: body.finishedGoodImageUrl || null,
         finishedGoodShortDesc: body.finishedGoodShortDesc || null,
@@ -45,6 +114,7 @@ export async function POST(request: NextRequest, { params }: Params) {
             league: true,
             teamCode: true,
             teamName: true,
+            wholesalePrice: true,
           },
         },
       },
