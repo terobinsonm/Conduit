@@ -150,14 +150,18 @@ export function transformCustomers(customers: Customer[]): Record<string, unknow
       CustomerCode: c.customerCode,
       Name: c.name,
       IsBillTo: c.isBillTo,
-      Enabled: c.enabled,
+      // Bill-To accounts are hidden parents, Ship-To stores are visible
+      Enabled: c.isBillTo ? false : c.enabled,
       Country: c.country,
-      BrandCode: c.brandCode,
       DiscountPercentage: c.discountPercentage,
       CommissionPercentage: c.commissionPercentage,
     };
 
-    if (c.storeCode) record.StoreCode = c.storeCode;
+    // StoreCode is required for Ship-To (non-Bill-To) records
+    if (!c.isBillTo && c.storeCode) {
+      record.StoreCode = c.storeCode;
+    }
+
     if (c.address1) record.Address1 = c.address1;
     if (c.address2) record.Address2 = c.address2;
     if (c.city) record.City = c.city;
@@ -166,6 +170,7 @@ export function transformCustomers(customers: Customer[]): Record<string, unknow
     if (c.phoneNumber) record.PhoneNumber = c.phoneNumber;
     if (c.faxNumber) record.FaxNumber = c.faxNumber;
     if (c.salesPersonCode) record.SalesPersonCode = c.salesPersonCode;
+    if (c.brandCode) record.BrandCode = c.brandCode;
     if (c.divisionCode) record.DivisionCode = c.divisionCode;
     if (c.termsCode) record.TermsCode = c.termsCode;
     if (c.shippingMethodCode) record.ShippingMethodCode = c.shippingMethodCode;
