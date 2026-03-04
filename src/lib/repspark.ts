@@ -239,10 +239,12 @@ export async function syncToRepSpark(
     }
 
     if (response.ok) {
+      console.log(`RepSpark ${entityType} response:`, responseData);
       return {
         success: true,
         recordCount: payload.length,
         statusCode: response.status,
+        details: responseData,
       };
     } else {
       return {
