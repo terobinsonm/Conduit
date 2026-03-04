@@ -21,6 +21,22 @@ export async function GET(request: NextRequest, { params }: Params) {
       sizeScale: { include: { sizes: true } },
       inventory: true,
       images: true,
+      licensedConfigs: {
+        include: {
+          decoration: {
+            select: {
+              id: true,
+              productNumber: true,
+              productName: true,
+              imageUrl: true,
+              league: true,
+              teamCode: true,
+              teamName: true,
+              wholesalePrice: true,
+            },
+          },
+        },
+      },
     },
   });
 
@@ -91,6 +107,17 @@ export async function PATCH(request: NextRequest, { params }: Params) {
         weight: body.weight !== undefined ? parseFloat(body.weight) : undefined,
         imageUrl: body.imageUrl,
         options: body.options !== undefined ? JSON.stringify(body.options) : undefined,
+        // Insignia fields
+        insigniaEnabled: body.insigniaEnabled,
+        allowedPlacements: body.allowedPlacements !== undefined 
+          ? (body.allowedPlacements ? JSON.stringify(body.allowedPlacements) : null)
+          : undefined,
+        finishPlacementRules: body.finishPlacementRules !== undefined
+          ? (body.finishPlacementRules ? JSON.stringify(body.finishPlacementRules) : null)
+          : undefined,
+        insigniaColorOptions: body.insigniaColorOptions !== undefined
+          ? (body.insigniaColorOptions ? JSON.stringify(body.insigniaColorOptions) : null)
+          : undefined,
       },
     });
 
