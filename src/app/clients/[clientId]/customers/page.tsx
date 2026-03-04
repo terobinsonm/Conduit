@@ -10,19 +10,18 @@ import {
   Users,
   CheckCircle,
   XCircle,
-  Building,
+  Store,
 } from "lucide-react";
 
 interface Customer {
   id: string;
   customerCode: string;
   name: string;
-  storeCode: string | null;
   city: string | null;
   state: string | null;
   salesPersonCode: string | null;
-  isBillTo: boolean;
   enabled: boolean;
+  _count: { stores: number };
 }
 
 export default function CustomersPage() {
@@ -64,7 +63,7 @@ export default function CustomersPage() {
         <div>
           <h2 className="text-2xl font-bold">Customers</h2>
           <p className="text-muted-foreground">
-            {customers.length} customer{customers.length !== 1 ? "s" : ""}
+            {customers.length} account{customers.length !== 1 ? "s" : ""}
           </p>
         </div>
         <Link
@@ -95,7 +94,7 @@ export default function CustomersPage() {
         <div className="bg-white rounded-lg border p-12 text-center">
           <Users className="h-12 w-12 mx-auto text-gray-300 mb-4" />
           <h3 className="text-lg font-medium text-gray-900 mb-2">No customers yet</h3>
-          <p className="text-gray-500 mb-4">Add your first customer to get started.</p>
+          <p className="text-gray-500 mb-4">Add your first customer account to get started.</p>
           <Link
             href={`/clients/${params.clientId}/customers/new`}
             className="inline-flex items-center gap-2 px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-800"
@@ -117,7 +116,7 @@ export default function CustomersPage() {
                 <th className="px-4 py-3 text-left font-medium text-gray-600">Code</th>
                 <th className="px-4 py-3 text-left font-medium text-gray-600">Location</th>
                 <th className="px-4 py-3 text-left font-medium text-gray-600">Sales Rep</th>
-                <th className="px-4 py-3 text-center font-medium text-gray-600">Bill To</th>
+                <th className="px-4 py-3 text-center font-medium text-gray-600">Stores</th>
                 <th className="px-4 py-3 text-center font-medium text-gray-600">Status</th>
               </tr>
             </thead>
@@ -131,11 +130,6 @@ export default function CustomersPage() {
                     >
                       {customer.name}
                     </Link>
-                    {customer.storeCode && (
-                      <span className="ml-2 text-xs text-gray-500">
-                        Store: {customer.storeCode}
-                      </span>
-                    )}
                   </td>
                   <td className="px-4 py-3 text-gray-600 font-mono text-xs">
                     {customer.customerCode}
@@ -149,8 +143,11 @@ export default function CustomersPage() {
                     {customer.salesPersonCode || "—"}
                   </td>
                   <td className="px-4 py-3 text-center">
-                    {customer.isBillTo ? (
-                      <Building className="h-4 w-4 mx-auto text-blue-500" />
+                    {customer._count.stores > 0 ? (
+                      <span className="inline-flex items-center gap-1 text-gray-600">
+                        <Store className="h-3.5 w-3.5" />
+                        {customer._count.stores}
+                      </span>
                     ) : (
                       <span className="text-gray-300">—</span>
                     )}
