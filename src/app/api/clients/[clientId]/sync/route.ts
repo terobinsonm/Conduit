@@ -64,14 +64,15 @@ export async function POST(
         break;
       }
 
-      case "customers": {
-        const customers = await prisma.customer.findMany({
-          where: { clientId: params.clientId },
-        });
-        const payload = transformCustomers(customers);
-        result = await syncToRepSpark(client, environment, "customer", payload);
-        break;
-      }
+case "customers": {
+  // Fetch ALL customers (both Bill-To and Ship-To) for sync
+  const customers = await prisma.customer.findMany({
+    where: { clientId: params.clientId },
+  });
+  const payload = transformCustomers(customers);
+  result = await syncToRepSpark(client, environment, "customer", payload);
+  break;
+}
 
       case "images": {
         // Handle images sync separately - calls the images sync endpoint
