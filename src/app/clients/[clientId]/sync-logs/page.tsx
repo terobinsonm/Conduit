@@ -138,38 +138,38 @@ export default function SyncLogsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {logs.map((log) => (
-                <tr key={log.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3">
-                    {log.success ? (
-                      <CheckCircle className="h-5 w-5 text-green-500" />
-                    ) : (
-                      <XCircle className="h-5 w-5 text-red-500" />
-                    )}
-                  </td>
-                  <td className="px-4 py-3 font-medium text-gray-900">
-                    {formatEntityType(log.entityType)}
-                  </td>
-                  <td className="px-4 py-3">
-                    <span
-                      className={`inline-flex px-2 py-0.5 text-xs font-medium rounded ${
-                        log.environment === "prod"
-                          ? "bg-red-100 text-red-700"
-                          : log.environment === "uat"
-                          ? "bg-yellow-100 text-yellow-700"
-                          : "bg-blue-100 text-blue-700"
-                      }`}
-                    >
-                      {formatEnvironment(log.environment)}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-gray-600">{log.recordCount}</td>
-                  <td className="px-4 py-3 text-gray-600">{formatDate(log.createdAt)}</td>
-                  <td className="px-4 py-3 text-red-600 text-xs max-w-xs truncate">
-                    {log.error || "—"}
-                  </td>
-                </tr>
-              ))}
+{logs.map((log) => (
+  <tr key={log.id} className="hover:bg-gray-50">
+    <td className="px-4 py-3">
+      {log.status === "success" ? (
+        <CheckCircle className="h-5 w-5 text-green-500" />
+      ) : (
+        <XCircle className="h-5 w-5 text-red-500" />
+      )}
+    </td>
+    <td className="px-4 py-3 font-medium text-gray-900">
+      {formatEntityType(log.entityType)}
+    </td>
+    <td className="px-4 py-3">
+      <span
+        className={`inline-flex px-2 py-0.5 text-xs font-medium rounded ${
+          log.environment === "prod"
+            ? "bg-red-100 text-red-700"
+            : log.environment === "uat"
+            ? "bg-yellow-100 text-yellow-700"
+            : "bg-blue-100 text-blue-700"
+        }`}
+      >
+        {formatEnvironment(log.environment)}
+      </span>
+    </td>
+    <td className="px-4 py-3 text-gray-600">{log.recordCount}</td>
+    <td className="px-4 py-3 text-gray-600">{formatDate(log.startedAt)}</td>
+    <td className="px-4 py-3 text-red-600 text-xs max-w-xs truncate">
+      {log.errorMessage || "—"}
+    </td>
+  </tr>
+))}
             </tbody>
           </table>
         </div>
