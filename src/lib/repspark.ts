@@ -198,83 +198,63 @@ export interface SyncResult {
   details?: unknown;
 }
 
-export async function syncToRepSpark(
-  client: Client,
-  environment: Environment,
-  entityType: "option" | "sizing" | "product" | "inventory" | "customer",
-  payload: Record<string, unknown>[],
-  syncMode: "Full" | "Delta" = "Full"
-): Promise<SyncResult> {
-  const config = getApiConfig(client, environment);
+try {
+  console.log(`RepSpark ${entityType} sync request:`, {
+    url: `${config.baseUrl}/api/${entityType}`,
+    syncMode,
+    payloadCount: payload.length,
+    payload: payload.slice(0, 2),
+  });
 
-  if (!config) {
-    return {
-      success: false,
-      recordCount: 0,
-      error: `Missing API credentials for ${environment} environment`,
-    };
+  const response = await fetch(`${config.baseUrl}/api/${entityType}`, {
+    method: "POST",
+    headers: {
+      Authorization: getAuthHeader(config),
+      "X-RepSpark-TransactionToken": transactionToken,
+      "X-RepSpark-SyncMode": syncMode,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  const responseText = await response.text();
+  
+  console.log(`RepSpark ${entityType} raw response:`, {
+    status: response.status,
+    body: responseText.substring(0, 500),
+  });
+
+  let responseData: unknown;
+  try {
+    responseData = responseText ? JSON.parse(responseText) : null;
+  } catch {
+    // Response wasn't JSON (likely HTML error page)
+    responseData = responseText.substring(0, 200);
   }
 
-  const transactionToken = generateTransactionToken();
-
-  try {
-    console.log(`RepSpark ${entityType} sync request:`, {
-      url: `${config.baseUrl}/api/${entityType}`,
-      syncMode,
-      payloadCount: payload.length,
-      payload: payload.slice(0, 2),
-    });
-
-    const response = await fetch(`${config.baseUrl}/api/${entityType}`, {
-      method: "POST",
-      headers: {
-        Authorization: getAuthHeader(config),
-        "X-RepSpark-TransactionToken": transactionToken,
-        "X-RepSpark-SyncMode": syncMode,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(payload),
-    });
-
-    const responseText = await response.text();
-    let responseData: unknown;
-
-    try {
-      responseData = JSON.parse(responseText);
-    } catch {
-      responseData = responseText;
-    }
-
-    console.log(`RepSpark ${entityType} sync response:`, {
-      status: response.status,
-      ok: response.ok,
-      response: responseData,
-    });
-
-    if (response.ok) {
-      return {
-        success: true,
-        recordCount: payload.length,
-        statusCode: response.status,
-        details: responseData,
-      };
-    } else {
-      return {
-        success: false,
-        recordCount: payload.length,
-        statusCode: response.status,
-        error: `API returned ${response.status}`,
-        details: responseData,
-      };
-    }
-  } catch (error) {
-    console.error(`RepSpark ${entityType} sync error:`, error);
+  if (response.ok) {
+    return {
+      success: true,
+      recordCount: payload.length,
+      statusCode: response.status,
+      details: responseData,
+    };
+  } else {
     return {
       success: false,
       recordCount: payload.length,
-      error: error instanceof Error ? error.message : "Unknown error",
+      statusCode: response.status,
+      error: `API returned ${response.status}`,
+      details: responseData,
     };
   }
+} catch (error) {
+  console.error(`RepSpark ${entityType} sync error:`, error);
+  return {
+    success: false,
+    recordCount: payload.length,
+    error: error instanceof Error ? error.message : "Unknown error",
+  };
 }
 
 export async function testConnection(
