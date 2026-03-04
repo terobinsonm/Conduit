@@ -24,11 +24,10 @@ export async function GET(request: NextRequest, { params }: Params) {
   if (entityType) where.entityType = entityType;
   if (environment) where.environment = environment;
 
-  const logs = await prisma.syncLog.findMany({
-    where,
-    orderBy: { createdAt: "desc" },
-    take: limit,
-  });
-
+const logs = await prisma.syncLog.findMany({
+  where,
+  orderBy: { id: "desc" },
+  take: limit,
+});
   return NextResponse.json(logs);
 }
