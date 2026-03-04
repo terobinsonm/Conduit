@@ -14,6 +14,7 @@ import {
   RefreshCw,
   LayoutDashboard,
   ChevronLeft,
+  History,
 } from "lucide-react";
 
 interface ClientLayoutProps {
