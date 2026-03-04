@@ -357,3 +357,23 @@ model SyncSchedule {
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
 }
+
+model SyncLog {
+  id          String   @id @default(cuid())
+  clientId    String
+  client      Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  
+  entityType  String   // options, sizing, products, inventory, customers
+  environment String   // dev, uat, prod
+  syncMode    String   @default("Full") // Full, Delta
+  
+  recordCount Int
+  success     Boolean
+  error       String?
+  details     String?  // JSON string for additional info
+  
+  createdAt   DateTime @default(now())
+
+  @@index([clientId])
+  @@index([createdAt])
+}
