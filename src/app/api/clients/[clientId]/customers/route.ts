@@ -18,30 +18,6 @@ interface StoreInput {
   enabled?: boolean;
 }
 
-export async function GET(request: NextRequest, { params }: Params) {
-  const { userId } = auth();
-  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-  const membership = await prisma.clientMember.findFirst({
-    where: { clientId: params.clientId, userId },
-  });
-  if (!membership) return NextResponse.json({ error: "Not found" }, { status: 404 });
-
-  const customers = await prisma.customer.findMany({
-    where: { 
-      clientId: params.clientId,
-      isBillTo: true,
-      parentId: null,
-    },
-    include: {
-      _count: { select: { stores: true } },
-    },
-    orderBy: { name: "asc" },
-  });
-
-  return NextResponse.json(customers);
-}
-
 export async function POST(request: NextRequest, { params }: Params) {
   const { userId } = auth();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -78,8 +54,6 @@ export async function POST(request: NextRequest, { params }: Params) {
           name: body.name,
           isBillTo: true,
           enabled: body.enabled ?? true,
-          storeCode: null,
-          parentId: null,
           address1: body.address1 || null,
           address2: body.address2 || null,
           city: body.city || null,
