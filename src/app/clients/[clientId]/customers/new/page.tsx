@@ -12,8 +12,6 @@ export default function NewCustomerPage() {
 
   const [customerCode, setCustomerCode] = useState("");
   const [name, setName] = useState("");
-  const [storeCode, setStoreCode] = useState("");
-  const [isBillTo, setIsBillTo] = useState(false);
   const [enabled, setEnabled] = useState(true);
 
   const [address1, setAddress1] = useState("");
@@ -28,7 +26,6 @@ export default function NewCustomerPage() {
   const [brandCode, setBrandCode] = useState("CC");
   const [divisionCode, setDivisionCode] = useState("");
   const [termsCode, setTermsCode] = useState("");
-  const [shippingMethodCode, setShippingMethodCode] = useState("");
 
   const [discountPercentage, setDiscountPercentage] = useState("");
   const [pricePlanCode, setPricePlanCode] = useState("");
@@ -57,10 +54,8 @@ export default function NewCustomerPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          customerCode: customerCode.trim(),
+          customerCode: customerCode.trim().toUpperCase(),
           name: name.trim(),
-          storeCode: storeCode.trim() || null,
-          isBillTo,
           enabled,
           address1: address1.trim() || null,
           address2: address2.trim() || null,
@@ -73,7 +68,6 @@ export default function NewCustomerPage() {
           brandCode: brandCode.trim() || "CC",
           divisionCode: divisionCode.trim() || null,
           termsCode: termsCode.trim() || null,
-          shippingMethodCode: shippingMethodCode.trim() || null,
           discountPercentage: discountPercentage || 0,
           pricePlanCode: pricePlanCode.trim() || null,
           customerGroupCode: customerGroupCode.trim() || null,
@@ -85,7 +79,8 @@ export default function NewCustomerPage() {
       });
 
       if (res.ok) {
-        router.push(`/clients/${params.clientId}/customers`);
+        const customer = await res.json();
+        router.push(`/clients/${params.clientId}/customers/${customer.id}`);
       } else {
         const error = await res.json();
         alert(error.error || "Failed to create customer");
@@ -107,7 +102,10 @@ export default function NewCustomerPage() {
           >
             <ArrowLeft className="h-5 w-5" />
           </Link>
-          <h1 className="text-xl font-semibold text-gray-900">Add customer</h1>
+          <div>
+            <h1 className="text-xl font-semibold text-gray-900">Add customer</h1>
+            <p className="text-sm text-gray-500">Create a new bill-to account</p>
+          </div>
         </div>
         <div className="flex items-center gap-3">
           <Link
@@ -130,49 +128,38 @@ export default function NewCustomerPage() {
       <div className="grid grid-cols-3 gap-6">
         <div className="col-span-2 space-y-6">
           <div className="bg-white border border-gray-200 rounded-lg p-6">
-            <h2 className="text-sm font-semibold text-gray-900 mb-4">Basic information</h2>
+            <h2 className="text-sm font-semibold text-gray-900 mb-4">Account information</h2>
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Customer code <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={customerCode}
-                    onChange={(e) => setCustomerCode(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-gray-900"
-                    placeholder="e.g., CUST001"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Store code</label>
-                  <input
-                    type="text"
-                    value={storeCode}
-                    onChange={(e) => setStoreCode(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-gray-900"
-                    placeholder="Optional"
-                  />
-                </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Customer code <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={customerCode}
+                  onChange={(e) => setCustomerCode(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-gray-900 uppercase"
+                  placeholder="e.g., ACME"
+                />
+                <p className="text-xs text-gray-500 mt-1">Unique identifier shared across all stores</p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Name <span className="text-red-500">*</span>
+                  Account name <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-gray-900"
-                  placeholder="Company or customer name"
+                  placeholder="e.g., Acme Corporation"
                 />
               </div>
             </div>
           </div>
 
           <div className="bg-white border border-gray-200 rounded-lg p-6">
-            <h2 className="text-sm font-semibold text-gray-900 mb-4">Address</h2>
+            <h2 className="text-sm font-semibold text-gray-900 mb-4">Billing address</h2>
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Address line 1</label>
@@ -266,7 +253,7 @@ export default function NewCustomerPage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Terms</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Payment terms</label>
                 <input
                   type="text"
                   value={termsCode}
@@ -291,26 +278,15 @@ export default function NewCustomerPage() {
         <div className="space-y-6">
           <div className="bg-white border border-gray-200 rounded-lg p-6">
             <h2 className="text-sm font-semibold text-gray-900 mb-4">Status</h2>
-            <div className="space-y-3">
-              <label className="flex items-center gap-3">
-                <input
-                  type="checkbox"
-                  checked={enabled}
-                  onChange={(e) => setEnabled(e.target.checked)}
-                  className="rounded border-gray-300 text-gray-900 focus:ring-gray-900"
-                />
-                <span className="text-sm">Active</span>
-              </label>
-              <label className="flex items-center gap-3">
-                <input
-                  type="checkbox"
-                  checked={isBillTo}
-                  onChange={(e) => setIsBillTo(e.target.checked)}
-                  className="rounded border-gray-300 text-gray-900 focus:ring-gray-900"
-                />
-                <span className="text-sm">Bill-to account</span>
-              </label>
-            </div>
+            <label className="flex items-center gap-3">
+              <input
+                type="checkbox"
+                checked={enabled}
+                onChange={(e) => setEnabled(e.target.checked)}
+                className="rounded border-gray-300 text-gray-900 focus:ring-gray-900"
+              />
+              <span className="text-sm">Active</span>
+            </label>
           </div>
 
           <div className="bg-white border border-gray-200 rounded-lg p-6">
@@ -340,15 +316,6 @@ export default function NewCustomerPage() {
                   type="text"
                   value={divisionCode}
                   onChange={(e) => setDivisionCode(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-gray-900"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Shipping method</label>
-                <input
-                  type="text"
-                  value={shippingMethodCode}
-                  onChange={(e) => setShippingMethodCode(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-gray-900"
                 />
               </div>
