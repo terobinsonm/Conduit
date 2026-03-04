@@ -256,7 +256,7 @@ export default function EditProductPage() {
           const rules = JSON.parse(productData.finishPlacementRules);
           setFinishPlacementRules(rules);
           // Extract unique finish types from rules
-          const finishes = [...new Set(rules.map((r: { finish: string }) => r.finish))];
+const finishes = Array.from(new Set(rules.map((r: { finish: string }) => r.finish)));
           setAllowedFinishTypes(finishes as string[]);
         } catch {
           setFinishPlacementRules([]);
