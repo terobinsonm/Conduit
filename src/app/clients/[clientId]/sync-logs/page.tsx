@@ -9,11 +9,13 @@ interface SyncLog {
   entityType: string;
   environment: string;
   syncMode: string;
+  status: string;
   recordCount: number;
-  success: boolean;
-  error: string | null;
-  details: string | null;
-  createdAt: string;
+  errorMessage: string | null;
+  errorDetails: string | null;
+  triggeredBy: string;
+  startedAt: string;
+  completedAt: string | null;
 }
 
 export default function SyncLogsPage() {
