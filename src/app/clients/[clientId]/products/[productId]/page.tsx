@@ -9,6 +9,7 @@ import {
   Loader2,
   Trash2,
   Upload,
+  Plus,
 } from "lucide-react";
 import { ClassificationCombobox } from "../_components/classification-combobox";
 
@@ -31,6 +32,32 @@ interface Option {
   elementType: string;
   keyCode: string;
   stringValue: string;
+}
+
+interface Decoration {
+  id: string;
+  productNumber: string;
+  productName: string | null;
+  productType: number;
+  wholesalePrice: number;
+  imageUrl: string | null;
+  league: string | null;
+  teamCode: string | null;
+  teamName: string | null;
+}
+
+interface LicensedConfig {
+  id: string;
+  decorationId: string;
+  decoration: Decoration;
+  placement: string;
+  colorChoice: string;
+  finishedGoodName: string | null;
+  wholesalePrice: number | null;
+  retailPrice: number | null;
+  dateRangeBegin: string | null;
+  dateRangeEnd: string | null;
+  enabled: boolean;
 }
 
 interface Product {
@@ -59,6 +86,12 @@ interface Product {
   ignoreDiscounts: boolean;
   imageUrl: string | null;
   options: string | null;
+  // Insignia fields
+  insigniaEnabled: boolean;
+  allowedPlacements: string | null;
+  finishPlacementRules: string | null;
+  insigniaColorOptions: string | null;
+  // Relations
   inventory: {
     sizeCode: string;
     availableQuantity: number;
@@ -66,6 +99,7 @@ interface Product {
     replenishmentQuantity: number;
     infiniteAvailability: boolean;
   }[];
+  licensedConfigs?: LicensedConfig[];
 }
 
 export default function EditProductPage() {
@@ -114,19 +148,44 @@ export default function EditProductPage() {
 
   const [newOptions, setNewOptions] = useState<{ elementType: string; keyCode: string; stringValue: string }[]>([]);
 
+  // Insignia state
+  const [insigniaEnabled, setInsigniaEnabled] = useState(false);
+  const [allowedPlacements, setAllowedPlacements] = useState<string[]>([]);
+  const [finishPlacementRules, setFinishPlacementRules] = useState<{ finish: string; placement: string }[]>([]);
+  const [insigniaColorOptions, setInsigniaColorOptions] = useState<string[]>([]);
+
+  // Licensed configurations state
+  const [decorations, setDecorations] = useState<Decoration[]>([]);
+  const [licensedConfigs, setLicensedConfigs] = useState<LicensedConfig[]>([]);
+  const [showLicensedModal, setShowLicensedModal] = useState(false);
+  const [editingConfig, setEditingConfig] = useState<LicensedConfig | null>(null);
+  const [configForm, setConfigForm] = useState({
+    decorationId: "",
+    placement: "",
+    colorChoice: "",
+    finishedGoodName: "",
+    wholesalePrice: "",
+    retailPrice: "",
+    dateRangeBegin: "",
+    dateRangeEnd: "",
+    enabled: true,
+  });
+
   useEffect(() => {
     fetchData();
   }, [params.clientId, params.productId]);
 
   async function fetchData() {
-    const [productRes, optionsRes] = await Promise.all([
+    const [productRes, optionsRes, decorationsRes] = await Promise.all([
       fetch(`/api/clients/${params.clientId}/products/${params.productId}`),
       fetch(`/api/clients/${params.clientId}/options`),
+      fetch(`/api/clients/${params.clientId}/decorations?type=licensed`),
     ]);
 
-    const [productData, optionsData] = await Promise.all([
+    const [productData, optionsData, decorationsData] = await Promise.all([
       productRes.json(),
       optionsRes.json(),
+      decorationsRes.json(),
     ]);
 
     if (productRes.ok) {
@@ -155,6 +214,35 @@ export default function EditProductPage() {
       setWeight(productData.weight?.toString() || "");
       setIgnoreDiscounts(productData.ignoreDiscounts ?? false);
 
+      // Insignia fields
+      setInsigniaEnabled(productData.insigniaEnabled ?? false);
+      if (productData.allowedPlacements) {
+        try {
+          setAllowedPlacements(JSON.parse(productData.allowedPlacements));
+        } catch {
+          setAllowedPlacements([]);
+        }
+      }
+      if (productData.finishPlacementRules) {
+        try {
+          setFinishPlacementRules(JSON.parse(productData.finishPlacementRules));
+        } catch {
+          setFinishPlacementRules([]);
+        }
+      }
+      if (productData.insigniaColorOptions) {
+        try {
+          setInsigniaColorOptions(JSON.parse(productData.insigniaColorOptions));
+        } catch {
+          setInsigniaColorOptions([]);
+        }
+      }
+
+      // Licensed configs
+      if (productData.licensedConfigs) {
+        setLicensedConfigs(productData.licensedConfigs);
+      }
+
       if (productData.options) {
         try {
           setProductOptions(JSON.parse(productData.options));
@@ -177,6 +265,9 @@ export default function EditProductPage() {
     }
 
     setOptions(optionsData);
+    if (decorationsRes.ok) {
+      setDecorations(decorationsData);
+    }
     setLoading(false);
   }
 
@@ -272,6 +363,95 @@ export default function EditProductPage() {
     });
   }
 
+  // Licensed config functions
+  function openAddConfigModal() {
+    setEditingConfig(null);
+    setConfigForm({
+      decorationId: "",
+      placement: "",
+      colorChoice: "",
+      finishedGoodName: "",
+      wholesalePrice: "",
+      retailPrice: "",
+      dateRangeBegin: "",
+      dateRangeEnd: "",
+      enabled: true,
+    });
+    setShowLicensedModal(true);
+  }
+
+  function openEditConfigModal(config: LicensedConfig) {
+    setEditingConfig(config);
+    setConfigForm({
+      decorationId: config.decorationId,
+      placement: config.placement,
+      colorChoice: config.colorChoice,
+      finishedGoodName: config.finishedGoodName || "",
+      wholesalePrice: config.wholesalePrice?.toString() || "",
+      retailPrice: config.retailPrice?.toString() || "",
+      dateRangeBegin: config.dateRangeBegin?.split("T")[0] || "",
+      dateRangeEnd: config.dateRangeEnd?.split("T")[0] || "",
+      enabled: config.enabled,
+    });
+    setShowLicensedModal(true);
+  }
+
+  async function saveConfig() {
+    if (!configForm.decorationId || !configForm.placement || !configForm.colorChoice) {
+      alert("Logo, placement, and color choice are required");
+      return;
+    }
+
+    const method = editingConfig ? "PATCH" : "POST";
+    const url = editingConfig
+      ? `/api/clients/${params.clientId}/products/${params.productId}/licensed-configs/${editingConfig.id}`
+      : `/api/clients/${params.clientId}/products/${params.productId}/licensed-configs`;
+
+    const res = await fetch(url, {
+      method,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        decorationId: configForm.decorationId,
+        placement: configForm.placement,
+        colorChoice: configForm.colorChoice,
+        finishedGoodName: configForm.finishedGoodName || null,
+        wholesalePrice: configForm.wholesalePrice ? parseFloat(configForm.wholesalePrice) : null,
+        retailPrice: configForm.retailPrice ? parseFloat(configForm.retailPrice) : null,
+        dateRangeBegin: configForm.dateRangeBegin || null,
+        dateRangeEnd: configForm.dateRangeEnd || null,
+        enabled: configForm.enabled,
+      }),
+    });
+
+    if (res.ok) {
+      const saved = await res.json();
+      if (editingConfig) {
+        setLicensedConfigs((prev) =>
+          prev.map((c) => (c.id === saved.id ? saved : c))
+        );
+      } else {
+        setLicensedConfigs((prev) => [...prev, saved]);
+      }
+      setShowLicensedModal(false);
+    } else {
+      const error = await res.json();
+      alert(error.error || "Failed to save configuration");
+    }
+  }
+
+  async function deleteConfig(id: string) {
+    if (!confirm("Delete this configuration?")) return;
+
+    const res = await fetch(
+      `/api/clients/${params.clientId}/products/${params.productId}/licensed-configs/${id}`,
+      { method: "DELETE" }
+    );
+
+    if (res.ok) {
+      setLicensedConfigs((prev) => prev.filter((c) => c.id !== id));
+    }
+  }
+
   async function handleImageUpload(file: File) {
     if (!product) return;
     setUploading(true);
@@ -321,6 +501,9 @@ export default function EditProductPage() {
   const genders = options.filter((o) => o.elementType === "Gender");
   const categories = options.filter((o) => o.elementType === "ProductCategory");
   const divisions = options.filter((o) => o.elementType === "Division");
+  const placements = options.filter((o) => o.elementType === "Placement");
+  const finishTypes = options.filter((o) => o.elementType === "FinishType");
+  const colorChoices = options.filter((o) => o.elementType === "ColorChoice");
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -388,6 +571,11 @@ export default function EditProductPage() {
           options: productOptions.length > 0 ? productOptions : null,
           inventory: inventory.length > 0 ? inventory : null,
           newOptions,
+          // Insignia fields
+          insigniaEnabled,
+          allowedPlacements: allowedPlacements.length > 0 ? allowedPlacements : null,
+          finishPlacementRules: finishPlacementRules.length > 0 ? finishPlacementRules : null,
+          insigniaColorOptions: insigniaColorOptions.length > 0 ? insigniaColorOptions : null,
         }),
       });
 
@@ -442,6 +630,7 @@ export default function EditProductPage() {
   }
 
   const variants = generateVariants();
+  const isBaseProduct = parseInt(productType) === 2;
 
   return (
     <form onSubmit={handleSubmit} className="max-w-6xl mx-auto pb-20">
@@ -814,6 +1003,273 @@ export default function EditProductPage() {
               </div>
             </div>
           )}
+
+          {/* Insignia Settings - Only for base products (Type 2) */}
+          {isBaseProduct && (
+            <div className="bg-white border border-gray-200 rounded-lg p-6">
+              <h2 className="text-sm font-semibold text-gray-900 mb-4">Insignia Settings</h2>
+              
+              <div className="space-y-4">
+                <label className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    checked={insigniaEnabled}
+                    onChange={(e) => setInsigniaEnabled(e.target.checked)}
+                    className="rounded border-gray-300"
+                  />
+                  <span className="text-sm font-medium">Enable Insignia</span>
+                </label>
+                <p className="text-xs text-gray-500 -mt-2 ml-7">
+                  Allow customers to add logo decorations to this product
+                </p>
+
+                {insigniaEnabled && (
+                  <>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Allowed Placements
+                      </label>
+                      <div className="flex flex-wrap gap-2">
+                        {placements.map((p) => (
+                          <label
+                            key={p.id}
+                            className={`inline-flex items-center gap-2 px-3 py-1.5 border rounded-lg cursor-pointer text-sm ${
+                              allowedPlacements.includes(p.keyCode)
+                                ? "bg-gray-900 text-white border-gray-900"
+                                : "bg-white text-gray-700 border-gray-200 hover:border-gray-300"
+                            }`}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={allowedPlacements.includes(p.keyCode)}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setAllowedPlacements([...allowedPlacements, p.keyCode]);
+                                } else {
+                                  setAllowedPlacements(allowedPlacements.filter((x) => x !== p.keyCode));
+                                }
+                              }}
+                              className="hidden"
+                            />
+                            {p.stringValue}
+                          </label>
+                        ))}
+                      </div>
+                      {placements.length === 0 && (
+                        <p className="text-xs text-gray-400">No placements defined. Add them in Options.</p>
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Color Options
+                      </label>
+                      <div className="flex flex-wrap gap-2">
+                        {colorChoices.map((c) => (
+                          <label
+                            key={c.id}
+                            className={`inline-flex items-center gap-2 px-3 py-1.5 border rounded-lg cursor-pointer text-sm ${
+                              insigniaColorOptions.includes(c.keyCode)
+                                ? "bg-gray-900 text-white border-gray-900"
+                                : "bg-white text-gray-700 border-gray-200 hover:border-gray-300"
+                            }`}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={insigniaColorOptions.includes(c.keyCode)}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setInsigniaColorOptions([...insigniaColorOptions, c.keyCode]);
+                                } else {
+                                  setInsigniaColorOptions(insigniaColorOptions.filter((x) => x !== c.keyCode));
+                                }
+                              }}
+                              className="hidden"
+                            />
+                            {c.stringValue}
+                          </label>
+                        ))}
+                      </div>
+                      {colorChoices.length === 0 && (
+                        <p className="text-xs text-gray-400">No color choices defined. Add them in Options.</p>
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Finish + Placement Rules
+                      </label>
+                      <p className="text-xs text-gray-500 mb-2">
+                        Define which finish types are allowed at which placements
+                      </p>
+                      
+                      {finishPlacementRules.length > 0 && (
+                        <div className="space-y-2 mb-3">
+                          {finishPlacementRules.map((rule, index) => (
+                            <div key={index} className="flex items-center gap-2 p-2 bg-gray-50 rounded">
+                              <span className="text-sm">{rule.finish}</span>
+                              <span className="text-gray-400">→</span>
+                              <span className="text-sm">{rule.placement}</span>
+                              <button
+                                type="button"
+                                onClick={() => setFinishPlacementRules(finishPlacementRules.filter((_, i) => i !== index))}
+                                className="ml-auto p-1 text-gray-400 hover:text-red-500"
+                              >
+                                <X className="h-3 w-3" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      <div className="flex gap-2">
+                        <select
+                          id="new-finish"
+                          className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm"
+                          defaultValue=""
+                        >
+                          <option value="" disabled>Select finish...</option>
+                          {finishTypes.map((f) => (
+                            <option key={f.id} value={f.keyCode}>{f.stringValue}</option>
+                          ))}
+                        </select>
+                        <select
+                          id="new-placement"
+                          className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm"
+                          defaultValue=""
+                        >
+                          <option value="" disabled>Select placement...</option>
+                          {placements.map((p) => (
+                            <option key={p.id} value={p.keyCode}>{p.stringValue}</option>
+                          ))}
+                        </select>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const finishSelect = document.getElementById("new-finish") as HTMLSelectElement;
+                            const placementSelect = document.getElementById("new-placement") as HTMLSelectElement;
+                            if (finishSelect.value && placementSelect.value) {
+                              setFinishPlacementRules([
+                                ...finishPlacementRules,
+                                { finish: finishSelect.value, placement: placementSelect.value },
+                              ]);
+                              finishSelect.value = "";
+                              placementSelect.value = "";
+                            }
+                          }}
+                          className="px-3 py-2 bg-gray-100 text-gray-700 text-sm rounded-lg hover:bg-gray-200"
+                        >
+                          Add
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Licensed Configurations - Only for base products (Type 2) */}
+          {isBaseProduct && (
+            <div className="bg-white border border-gray-200 rounded-lg p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h2 className="text-sm font-semibold text-gray-900">Licensed Configurations</h2>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Pre-configured licensed logos for this product
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={openAddConfigModal}
+                  className="inline-flex items-center gap-2 px-3 py-1.5 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200"
+                >
+                  <Plus className="h-4 w-4" />
+                  Add
+                </button>
+              </div>
+
+              {licensedConfigs.length === 0 ? (
+                <p className="text-sm text-gray-400 text-center py-6">
+                  No licensed configurations yet
+                </p>
+              ) : (
+                <div className="border border-gray-200 rounded-lg overflow-hidden">
+                  <table className="w-full text-sm">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-4 py-2 text-left font-medium text-gray-600">Logo</th>
+                        <th className="px-4 py-2 text-left font-medium text-gray-600">Placement</th>
+                        <th className="px-4 py-2 text-left font-medium text-gray-600">Color</th>
+                        <th className="px-4 py-2 text-left font-medium text-gray-600">Date Range</th>
+                        <th className="px-4 py-2 text-left font-medium text-gray-600">Status</th>
+                        <th className="px-4 py-2"></th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                      {licensedConfigs.map((config) => (
+                        <tr key={config.id}>
+                          <td className="px-4 py-2">
+                            <div className="flex items-center gap-2">
+                              {config.decoration?.imageUrl && (
+                                <img
+                                  src={config.decoration.imageUrl}
+                                  alt=""
+                                  className="h-8 w-8 object-contain rounded"
+                                />
+                              )}
+                              <div>
+                                <div className="font-medium">
+                                  {config.decoration?.teamName || config.decoration?.productName}
+                                </div>
+                                <div className="text-xs text-gray-400">
+                                  {config.decoration?.league}
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-4 py-2">{config.placement}</td>
+                          <td className="px-4 py-2">{config.colorChoice}</td>
+                          <td className="px-4 py-2 text-xs text-gray-500">
+                            {config.dateRangeBegin && config.dateRangeEnd
+                              ? `${config.dateRangeBegin.split("T")[0]} - ${config.dateRangeEnd.split("T")[0]}`
+                              : "—"}
+                          </td>
+                          <td className="px-4 py-2">
+                            <span
+                              className={`inline-flex px-2 py-0.5 text-xs font-medium rounded ${
+                                config.enabled
+                                  ? "bg-green-100 text-green-700"
+                                  : "bg-gray-100 text-gray-600"
+                              }`}
+                            >
+                              {config.enabled ? "Active" : "Inactive"}
+                            </span>
+                          </td>
+                          <td className="px-4 py-2 text-right">
+                            <button
+                              type="button"
+                              onClick={() => openEditConfigModal(config)}
+                              className="text-blue-600 hover:underline text-sm mr-3"
+                            >
+                              Edit
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => deleteConfig(config.id)}
+                              className="text-red-600 hover:underline text-sm"
+                            >
+                              Delete
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="space-y-6">
@@ -944,9 +1400,9 @@ export default function EditProductPage() {
                   onChange={(e) => setProductType(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-gray-900"
                 >
-                  <option value="2">Regular</option>
-                  <option value="3">Customization</option>
-                  <option value="4">Bundle</option>
+                  <option value="2">Base Product (Type 2)</option>
+                  <option value="3">Insignia Logo (Type 3)</option>
+                  <option value="4">Licensed Logo (Type 4)</option>
                 </select>
               </div>
             </div>
@@ -978,6 +1434,187 @@ export default function EditProductPage() {
           </div>
         </div>
       </div>
+
+      {/* Licensed Configuration Modal */}
+      {showLicensedModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-lg mx-4">
+            <div className="flex items-center justify-between p-4 border-b">
+              <h3 className="font-semibold text-gray-900">
+                {editingConfig ? "Edit Configuration" : "Add Licensed Configuration"}
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowLicensedModal(false)}
+                className="p-1 hover:bg-gray-100 rounded"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="p-4 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Logo <span className="text-red-500">*</span>
+                </label>
+                <select
+                  value={configForm.decorationId}
+                  onChange={(e) => setConfigForm({ ...configForm, decorationId: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
+                >
+                  <option value="">Select logo...</option>
+                  {decorations.map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {d.teamName || d.productName} ({d.league})
+                    </option>
+                  ))}
+                </select>
+                {decorations.length === 0 && (
+                  <p className="text-xs text-gray-400 mt-1">
+                    No licensed logos available.{" "}
+                    <Link href={`/clients/${params.clientId}/decorations/new`} className="text-blue-600">
+                      Create one
+                    </Link>
+                  </p>
+                )}
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Placement <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={configForm.placement}
+                    onChange={(e) => setConfigForm({ ...configForm, placement: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
+                  >
+                    <option value="">Select...</option>
+                    {placements.map((p) => (
+                      <option key={p.id} value={p.keyCode}>{p.stringValue}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Color Choice <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={configForm.colorChoice}
+                    onChange={(e) => setConfigForm({ ...configForm, colorChoice: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
+                  >
+                    <option value="">Select...</option>
+                    {colorChoices.map((c) => (
+                      <option key={c.id} value={c.keyCode}>{c.stringValue}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Finished Good Name
+                </label>
+                <input
+                  type="text"
+                  value={configForm.finishedGoodName}
+                  onChange={(e) => setConfigForm({ ...configForm, finishedGoodName: e.target.value })}
+                  placeholder="e.g., Seaside Polo - Alabama"
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
+                />
+                <p className="text-xs text-gray-400 mt-1">
+                  Display name for the finished good. Leave blank to auto-generate.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Price Override
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={configForm.wholesalePrice}
+                    onChange={(e) => setConfigForm({ ...configForm, wholesalePrice: e.target.value })}
+                    placeholder="Leave blank for default"
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Retail Override
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={configForm.retailPrice}
+                    onChange={(e) => setConfigForm({ ...configForm, retailPrice: e.target.value })}
+                    placeholder="Leave blank for default"
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Date Range Begin
+                  </label>
+                  <input
+                    type="date"
+                    value={configForm.dateRangeBegin}
+                    onChange={(e) => setConfigForm({ ...configForm, dateRangeBegin: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Date Range End
+                  </label>
+                  <input
+                    type="date"
+                    value={configForm.dateRangeEnd}
+                    onChange={(e) => setConfigForm({ ...configForm, dateRangeEnd: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
+                  />
+                </div>
+              </div>
+
+              <label className="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  checked={configForm.enabled}
+                  onChange={(e) => setConfigForm({ ...configForm, enabled: e.target.checked })}
+                  className="rounded border-gray-300"
+                />
+                <span className="text-sm">Active</span>
+              </label>
+            </div>
+
+            <div className="flex justify-end gap-3 p-4 border-t">
+              <button
+                type="button"
+                onClick={() => setShowLicensedModal(false)}
+                className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={saveConfig}
+                className="px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-800"
+              >
+                {editingConfig ? "Save Changes" : "Add Configuration"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </form>
   );
 }
