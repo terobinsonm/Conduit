@@ -12,6 +12,8 @@ interface StoreRecord {
   address1: string | null;
   city: string | null;
   state: string | null;
+  zip: string | null;
+  phoneNumber: string | null;
   enabled: boolean;
 }
 
@@ -28,7 +30,7 @@ interface Customer {
   country: string;
   phoneNumber: string | null;
   salesPersonCode: string | null;
-  brandCode: string;
+  brandCode: string | null;
   divisionCode: string | null;
   termsCode: string | null;
   discountPercentage: number;
@@ -62,7 +64,7 @@ export default function EditCustomerPage() {
   const [phoneNumber, setPhoneNumber] = useState("");
 
   const [salesPersonCode, setSalesPersonCode] = useState("");
-  const [brandCode, setBrandCode] = useState("CC");
+  const [brandCode, setBrandCode] = useState("");
   const [divisionCode, setDivisionCode] = useState("");
   const [termsCode, setTermsCode] = useState("");
 
@@ -74,7 +76,6 @@ export default function EditCustomerPage() {
   const [typeCode, setTypeCode] = useState("");
   const [creditStatusCode, setCreditStatusCode] = useState("");
 
-  // Store modal state
   const [showStoreModal, setShowStoreModal] = useState(false);
   const [editingStore, setEditingStore] = useState<StoreRecord | null>(null);
   const [storeCode, setStoreCode] = useState("");
@@ -82,6 +83,8 @@ export default function EditCustomerPage() {
   const [storeAddress1, setStoreAddress1] = useState("");
   const [storeCity, setStoreCity] = useState("");
   const [storeState, setStoreState] = useState("");
+  const [storeZip, setStoreZip] = useState("");
+  const [storePhone, setStorePhone] = useState("");
   const [storeEnabled, setStoreEnabled] = useState(true);
   const [savingStore, setSavingStore] = useState(false);
 
@@ -105,7 +108,7 @@ export default function EditCustomerPage() {
       setCountry(data.country || "US");
       setPhoneNumber(data.phoneNumber || "");
       setSalesPersonCode(data.salesPersonCode || "");
-      setBrandCode(data.brandCode || "CC");
+      setBrandCode(data.brandCode || "");
       setDivisionCode(data.divisionCode || "");
       setTermsCode(data.termsCode || "");
       setDiscountPercentage(data.discountPercentage?.toString() || "");
@@ -126,6 +129,8 @@ export default function EditCustomerPage() {
     setStoreAddress1("");
     setStoreCity("");
     setStoreState("");
+    setStoreZip("");
+    setStorePhone("");
     setStoreEnabled(true);
     setShowStoreModal(true);
   }
@@ -137,6 +142,8 @@ export default function EditCustomerPage() {
     setStoreAddress1(store.address1 || "");
     setStoreCity(store.city || "");
     setStoreState(store.state || "");
+    setStoreZip(store.zip || "");
+    setStorePhone(store.phoneNumber || "");
     setStoreEnabled(store.enabled);
     setShowStoreModal(true);
   }
@@ -163,6 +170,8 @@ export default function EditCustomerPage() {
           address1: storeAddress1.trim() || null,
           city: storeCity.trim() || null,
           state: storeState.trim() || null,
+          zip: storeZip.trim() || null,
+          phoneNumber: storePhone.trim() || null,
           enabled: storeEnabled,
         }),
       });
@@ -227,7 +236,7 @@ export default function EditCustomerPage() {
           country,
           phoneNumber: phoneNumber.trim() || null,
           salesPersonCode: salesPersonCode.trim() || null,
-          brandCode: brandCode.trim() || "CC",
+          brandCode: brandCode.trim() || null,
           divisionCode: divisionCode.trim() || null,
           termsCode: termsCode.trim() || null,
           discountPercentage: discountPercentage || 0,
@@ -303,7 +312,7 @@ export default function EditCustomerPage() {
             </Link>
             <div>
               <h1 className="text-xl font-semibold text-gray-900">{customer.name}</h1>
-              <p className="text-sm text-gray-500">Bill-to account · {customer.customerCode}</p>
+              <p className="text-sm text-gray-500">{customer.customerCode}</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -477,7 +486,6 @@ export default function EditCustomerPage() {
               </div>
             </div>
 
-            {/* Stores Section */}
             <div className="bg-white border border-gray-200 rounded-lg p-6">
               <div className="flex items-center justify-between mb-4">
                 <div>
@@ -497,8 +505,8 @@ export default function EditCustomerPage() {
               {customer.stores.length === 0 ? (
                 <div className="text-center py-8 border-2 border-dashed border-gray-200 rounded-lg">
                   <Store className="h-8 w-8 mx-auto text-gray-300 mb-2" />
-                  <p className="text-sm text-gray-500">No stores yet</p>
-                  <p className="text-xs text-gray-400">Add ship-to locations for this customer</p>
+                  <p className="text-sm text-gray-500">No separate shipping locations</p>
+                  <p className="text-xs text-gray-400">Billing address will be used for shipping</p>
                 </div>
               ) : (
                 <div className="border border-gray-200 rounded-lg overflow-hidden">
@@ -514,7 +522,7 @@ export default function EditCustomerPage() {
                     </thead>
                     <tbody className="divide-y divide-gray-200">
                       {customer.stores.map((store) => (
-                        <tr key={store.id} className="hover:bg-gray-50">
+                        <tr key={store.id} className={`hover:bg-gray-50 ${!store.enabled ? "opacity-50" : ""}`}>
                           <td className="px-4 py-2">
                             <button
                               type="button"
@@ -569,7 +577,12 @@ export default function EditCustomerPage() {
                   onChange={(e) => setEnabled(e.target.checked)}
                   className="rounded border-gray-300 text-gray-900 focus:ring-gray-900"
                 />
-                <span className="text-sm">Active</span>
+                <div>
+                  <span className="text-sm">Active</span>
+                  <p className="text-xs text-gray-500">
+                    {enabled ? "Included in sync to RepSpark" : "Excluded from sync"}
+                  </p>
+                </div>
               </label>
             </div>
 
@@ -651,7 +664,6 @@ export default function EditCustomerPage() {
         </div>
       </form>
 
-      {/* Store Modal */}
       {showStoreModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
@@ -667,29 +679,31 @@ export default function EditCustomerPage() {
               </button>
             </div>
             <div className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Store code <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={storeCode}
-                  onChange={(e) => setStoreCode(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-gray-900 uppercase"
-                  placeholder="e.g., STORE001"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Store name <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={storeName}
-                  onChange={(e) => setStoreName(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-gray-900"
-                  placeholder="e.g., Downtown Location"
-                />
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Store code <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={storeCode}
+                    onChange={(e) => setStoreCode(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-gray-900 uppercase"
+                    placeholder="e.g., STORE001"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Store name <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={storeName}
+                    onChange={(e) => setStoreName(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-gray-900"
+                    placeholder="e.g., Downtown Location"
+                  />
+                </div>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
@@ -700,7 +714,7 @@ export default function EditCustomerPage() {
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-gray-900"
                 />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
                   <input
@@ -719,6 +733,24 @@ export default function EditCustomerPage() {
                     className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-gray-900"
                   />
                 </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">ZIP</label>
+                  <input
+                    type="text"
+                    value={storeZip}
+                    onChange={(e) => setStoreZip(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-gray-900"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                <input
+                  type="text"
+                  value={storePhone}
+                  onChange={(e) => setStorePhone(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-gray-900"
+                />
               </div>
               <label className="flex items-center gap-3">
                 <input
@@ -727,7 +759,12 @@ export default function EditCustomerPage() {
                   onChange={(e) => setStoreEnabled(e.target.checked)}
                   className="rounded border-gray-300 text-gray-900 focus:ring-gray-900"
                 />
-                <span className="text-sm">Active</span>
+                <div>
+                  <span className="text-sm">Active</span>
+                  <p className="text-xs text-gray-500">
+                    {storeEnabled ? "Included in sync to RepSpark" : "Excluded from sync"}
+                  </p>
+                </div>
               </label>
             </div>
             <div className="flex justify-end gap-3 px-6 py-4 border-t bg-gray-50">
