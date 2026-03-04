@@ -222,7 +222,7 @@ export async function syncToRepSpark(
       url: `${config.baseUrl}/api/${entityType}`,
       syncMode,
       payloadCount: payload.length,
-      payload: payload.slice(0, 2),
+      payload: payload,
     });
 
     const response = await fetch(`${config.baseUrl}/api/${entityType}`, {
