@@ -253,9 +253,14 @@ model Customer {
   
   customerCode         String
   name                 String
-  isBillTo             Boolean  @default(false)
+  isBillTo             Boolean  @default(true)
   enabled              Boolean  @default(true)
   storeCode            String?
+  
+  // Self-referential: Bill-To has stores, Store belongs to Bill-To
+  parentId             String?
+  parent               Customer?  @relation("CustomerStores", fields: [parentId], references: [id], onDelete: Cascade)
+  stores               Customer[] @relation("CustomerStores")
   
   address1             String?
   address2             String?
@@ -294,8 +299,8 @@ model Customer {
   @@index([clientId])
   @@index([clientId, customerCode])
   @@index([clientId, salesPersonCode])
+  @@index([parentId])
 }
-
 // ============================================================================
 // SYNC MANAGEMENT
 // ============================================================================
