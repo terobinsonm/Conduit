@@ -15,8 +15,16 @@ export async function GET(request: NextRequest, { params }: Params) {
   });
   if (!membership) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
+  // Only fetch Bill-To accounts (parents), include store count
   const customers = await prisma.customer.findMany({
-    where: { clientId: params.clientId },
+    where: { 
+      clientId: params.clientId,
+      isBillTo: true,
+      parentId: null,
+    },
+    include: {
+      _count: { select: { stores: true } },
+    },
     orderBy: { name: "asc" },
   });
 
@@ -35,12 +43,13 @@ export async function POST(request: NextRequest, { params }: Params) {
   try {
     const body = await request.json();
 
-    // Check for duplicate
+    // Check for duplicate Bill-To
     const existing = await prisma.customer.findFirst({
       where: {
         clientId: params.clientId,
         customerCode: body.customerCode,
-        storeCode: body.storeCode || null,
+        isBillTo: true,
+        parentId: null,
       },
     });
     if (existing) {
@@ -55,9 +64,10 @@ export async function POST(request: NextRequest, { params }: Params) {
         clientId: params.clientId,
         customerCode: body.customerCode,
         name: body.name,
-        isBillTo: body.isBillTo ?? false,
+        isBillTo: true, // Always true for parent customers
         enabled: body.enabled ?? true,
-        storeCode: body.storeCode || null,
+        storeCode: null, // Bill-To accounts don't have store codes
+        parentId: null,
         address1: body.address1 || null,
         address2: body.address2 || null,
         city: body.city || null,
@@ -77,12 +87,7 @@ export async function POST(request: NextRequest, { params }: Params) {
         classificationCode: body.classificationCode || null,
         channelCode: body.channelCode || null,
         typeCode: body.typeCode || null,
-        buyingGroupCode: body.buyingGroupCode || null,
         creditStatusCode: body.creditStatusCode || null,
-        commissionPercentage: parseFloat(body.commissionPercentage) || 0,
-        dba: body.dba || null,
-        paymentsVisibility: body.paymentsVisibility || null,
-        referenceNumber: body.referenceNumber || null,
       },
     });
 
