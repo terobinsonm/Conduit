@@ -15,6 +15,7 @@ import {
   LayoutDashboard,
   ChevronLeft,
   History,
+  Palette,
 } from "lucide-react";
 
 interface ClientLayoutProps {
@@ -48,6 +49,7 @@ export default async function ClientLayout({ children, params }: ClientLayoutPro
   const navigation = [
     { name: "Dashboard", href: `/clients/${client.id}`, icon: LayoutDashboard },
     { name: "Products", href: `/clients/${client.id}/products`, icon: Package },
+    { name: "Decorations", href: `/clients/${client.id}/decorations`, icon: Palette },
     { name: "Options", href: `/clients/${client.id}/options`, icon: List },
     { name: "Size Scales", href: `/clients/${client.id}/sizing`, icon: Ruler },
     { name: "Images", href: `/clients/${client.id}/images`, icon: Image },
