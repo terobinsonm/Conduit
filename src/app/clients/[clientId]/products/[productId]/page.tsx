@@ -7,7 +7,6 @@ import {
   ArrowLeft,
   X,
   Loader2,
-  Package,
   Trash2,
   Upload,
 } from "lucide-react";
@@ -166,7 +165,7 @@ export default function EditProductPage() {
 
       if (productData.inventory && Array.isArray(productData.inventory)) {
         setInventory(
-          productData.inventory.map((inv: any) => ({
+          productData.inventory.map((inv: { sizeCode: string; availableQuantity?: number; availableDate?: string; replenishmentQuantity?: number; infiniteAvailability?: boolean }) => ({
             sizeCode: inv.sizeCode,
             availableQuantity: inv.availableQuantity || 0,
             availableDate: inv.availableDate ? inv.availableDate.split("T")[0] : new Date().toISOString().split("T")[0],
@@ -265,7 +264,7 @@ export default function EditProductPage() {
     );
   }
 
-  function updateInventory(index: number, field: keyof InventoryRecord, value: any) {
+  function updateInventory(index: number, field: keyof InventoryRecord, value: unknown) {
     setInventory((prev) => {
       const updated = [...prev];
       updated[index] = { ...updated[index], [field]: value };
@@ -325,12 +324,35 @@ export default function EditProductPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    
+    const errors: string[] = [];
+    
     if (!productNumber.trim()) {
-      alert("Product number is required");
-      return;
+      errors.push("Product number is required");
     }
     if (!wholesalePrice) {
-      alert("Wholesale price is required");
+      errors.push("Wholesale price is required");
+    }
+    if (!seasonCode) {
+      errors.push("Season is required");
+    }
+    if (!colorCode) {
+      errors.push("Color is required");
+    }
+    if (!genderCode) {
+      errors.push("Gender is required");
+    }
+    if (!categoryCode) {
+      errors.push("Category is required");
+    }
+    
+    const sizeOptions = productOptions.filter((o) => !o.isProductLevel);
+    if (sizeOptions.length === 0 || sizeOptions.every((o) => o.values.length === 0)) {
+      errors.push("At least one size option with values is required (e.g., Size: S, M, L)");
+    }
+    
+    if (errors.length > 0) {
+      alert(errors.join("\n"));
       return;
     }
 
@@ -468,7 +490,6 @@ export default function EditProductPage() {
                   value={productNumber}
                   onChange={(e) => setProductNumber(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-gray-900"
-                  required
                 />
               </div>
               <div>
@@ -558,7 +579,6 @@ export default function EditProductPage() {
                     value={wholesalePrice}
                     onChange={(e) => setWholesalePrice(e.target.value)}
                     className="w-full pl-7 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-gray-900"
-                    required
                   />
                 </div>
               </div>
@@ -605,10 +625,20 @@ export default function EditProductPage() {
           </div>
 
           <div className="bg-white border border-gray-200 rounded-lg p-6">
-            <h2 className="text-sm font-semibold text-gray-900 mb-4">Options</h2>
+            <h2 className="text-sm font-semibold text-gray-900 mb-2">
+              Sizes / Options <span className="text-red-500">*</span>
+            </h2>
             <p className="text-sm text-gray-500 mb-4">
-              Define product options like size, color, material, etc.
+              Add at least one size option (e.g., Size: S, M, L, XL). This determines the available variants for ordering.
             </p>
+
+            {productOptions.length === 0 && (
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
+                <p className="text-sm text-yellow-800">
+                  You must add at least one size option before saving.
+                </p>
+              </div>
+            )}
 
             {productOptions.length > 0 && (
               <div className="space-y-4 mb-4">
@@ -675,7 +705,7 @@ export default function EditProductPage() {
                 type="text"
                 value={newOptionName}
                 onChange={(e) => setNewOptionName(e.target.value)}
-                placeholder="Option name (e.g., Size, Color, Material)"
+                placeholder="Option name (e.g., Size)"
                 className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-gray-900"
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
@@ -801,7 +831,8 @@ export default function EditProductPage() {
           </div>
 
           <div className="bg-white border border-gray-200 rounded-lg p-6">
-            <h2 className="text-sm font-semibold text-gray-900 mb-4">Classification</h2>
+            <h2 className="text-sm font-semibold text-gray-900 mb-2">Classification</h2>
+            <p className="text-xs text-gray-500 mb-4">Required for RepSpark sync</p>
             <div className="space-y-4">
               <ClassificationCombobox
                 label="Season"
@@ -816,6 +847,7 @@ export default function EditProductPage() {
                 }}
                 placeholder="Select or create season..."
                 multiple={true}
+                required={true}
               />
               <ClassificationCombobox
                 label="Color"
@@ -829,6 +861,7 @@ export default function EditProductPage() {
                   ]);
                 }}
                 placeholder="Select or create color..."
+                required={true}
               />
               <ClassificationCombobox
                 label="Gender"
@@ -842,6 +875,7 @@ export default function EditProductPage() {
                   ]);
                 }}
                 placeholder="Select or create gender..."
+                required={true}
               />
               <ClassificationCombobox
                 label="Category"
@@ -855,6 +889,7 @@ export default function EditProductPage() {
                   ]);
                 }}
                 placeholder="Select or create category..."
+                required={true}
               />
               <ClassificationCombobox
                 label="Division"
