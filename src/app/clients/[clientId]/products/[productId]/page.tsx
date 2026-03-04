@@ -54,6 +54,9 @@ interface LicensedConfig {
   placement: string;
   colorChoice: string;
   finishedGoodName: string | null;
+  finishedGoodImageUrl: string | null;
+  finishedGoodShortDesc: string | null;
+  finishedGoodLongDesc: string | null;
   wholesalePrice: number | null;
   retailPrice: number | null;
   dateRangeBegin: string | null;
@@ -168,11 +171,9 @@ export default function EditProductPage() {
   const [editingConfig, setEditingConfig] = useState<LicensedConfig | null>(null);
   const [savingConfig, setSavingConfig] = useState(false);
   
-  // Licensed config form - supports inline creation
+  // Licensed config form
   const [configForm, setConfigForm] = useState({
-    // Existing logo selection
     decorationId: "",
-    // OR create new logo
     createNewLogo: false,
     newLogoName: "",
     newLogoNumber: "",
@@ -180,18 +181,18 @@ export default function EditProductPage() {
     newLogoTeamCode: "",
     newLogoTeamName: "",
     newLogoPrice: "",
-    // Placement
     placement: "",
     createNewPlacement: false,
     newPlacementCode: "",
     newPlacementName: "",
-    // Color choice
     colorChoice: "",
     createNewColorChoice: false,
     newColorChoiceCode: "",
     newColorChoiceName: "",
-    // Config details
     finishedGoodName: "",
+    finishedGoodImageUrl: "",
+    finishedGoodShortDesc: "",
+    finishedGoodLongDesc: "",
     wholesalePrice: "",
     retailPrice: "",
     dateRangeBegin: "",
@@ -255,8 +256,7 @@ export default function EditProductPage() {
         try {
           const rules = JSON.parse(productData.finishPlacementRules);
           setFinishPlacementRules(rules);
-          // Extract unique finish types from rules
-const finishes = Array.from(new Set(rules.map((r: { finish: string }) => r.finish)));
+          const finishes = Array.from(new Set(rules.map((r: { finish: string }) => r.finish)));
           setAllowedFinishTypes(finishes as string[]);
         } catch {
           setFinishPlacementRules([]);
@@ -393,19 +393,16 @@ const finishes = Array.from(new Set(rules.map((r: { finish: string }) => r.finis
     if (!newPlacementCode.trim() || !newPlacementName.trim()) return;
     const code = newPlacementCode.toUpperCase();
     
-    // Add to newOptions for creation on save
     setNewOptions((prev) => [
       ...prev.filter((o) => !(o.elementType === "Placement" && o.keyCode === code)),
       { elementType: "Placement", keyCode: code, stringValue: newPlacementName },
     ]);
     
-    // Add to local options list for immediate display
     setOptions((prev) => [
       ...prev,
       { id: `new-${code}`, elementType: "Placement", keyCode: code, stringValue: newPlacementName },
     ]);
     
-    // Add to allowed placements
     setAllowedPlacements((prev) => [...prev, code]);
     
     setNewPlacementCode("");
@@ -455,6 +452,9 @@ const finishes = Array.from(new Set(rules.map((r: { finish: string }) => r.finis
       newColorChoiceCode: "",
       newColorChoiceName: "",
       finishedGoodName: "",
+      finishedGoodImageUrl: "",
+      finishedGoodShortDesc: "",
+      finishedGoodLongDesc: "",
       wholesalePrice: "",
       retailPrice: "",
       dateRangeBegin: "",
@@ -484,6 +484,9 @@ const finishes = Array.from(new Set(rules.map((r: { finish: string }) => r.finis
       newColorChoiceCode: "",
       newColorChoiceName: "",
       finishedGoodName: config.finishedGoodName || "",
+      finishedGoodImageUrl: config.finishedGoodImageUrl || "",
+      finishedGoodShortDesc: config.finishedGoodShortDesc || "",
+      finishedGoodLongDesc: config.finishedGoodLongDesc || "",
       wholesalePrice: config.wholesalePrice?.toString() || "",
       retailPrice: config.retailPrice?.toString() || "",
       dateRangeBegin: config.dateRangeBegin?.split("T")[0] || "",
@@ -497,7 +500,6 @@ const finishes = Array.from(new Set(rules.map((r: { finish: string }) => r.finis
     setSavingConfig(true);
     
     try {
-      // Validate required fields
       const needsLogo = configForm.createNewLogo 
         ? (configForm.newLogoName && configForm.newLogoNumber)
         : configForm.decorationId;
@@ -509,12 +511,11 @@ const finishes = Array.from(new Set(rules.map((r: { finish: string }) => r.finis
         : configForm.colorChoice;
 
       if (!needsLogo || !needsPlacement || !needsColorChoice) {
-        alert("Logo, placement, and color choice are required");
+        alert("Logo, placement, and logo color are required");
         setSavingConfig(false);
         return;
       }
 
-      // Use the comprehensive endpoint that handles all creation
       const method = editingConfig ? "PATCH" : "POST";
       const url = editingConfig
         ? `/api/clients/${params.clientId}/products/${params.productId}/licensed-configs/${editingConfig.id}`
@@ -524,7 +525,6 @@ const finishes = Array.from(new Set(rules.map((r: { finish: string }) => r.finis
         method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          // Existing logo or new logo data
           decorationId: configForm.createNewLogo ? null : configForm.decorationId,
           createNewLogo: configForm.createNewLogo,
           newLogo: configForm.createNewLogo ? {
@@ -535,22 +535,22 @@ const finishes = Array.from(new Set(rules.map((r: { finish: string }) => r.finis
             teamName: configForm.newLogoTeamName,
             wholesalePrice: parseFloat(configForm.newLogoPrice) || 0,
           } : null,
-          // Placement
           placement: configForm.createNewPlacement ? configForm.newPlacementCode.toUpperCase() : configForm.placement,
           createNewPlacement: configForm.createNewPlacement,
           newPlacement: configForm.createNewPlacement ? {
             keyCode: configForm.newPlacementCode.toUpperCase(),
             stringValue: configForm.newPlacementName,
           } : null,
-          // Color choice
           colorChoice: configForm.createNewColorChoice ? configForm.newColorChoiceCode.toUpperCase() : configForm.colorChoice,
           createNewColorChoice: configForm.createNewColorChoice,
           newColorChoice: configForm.createNewColorChoice ? {
             keyCode: configForm.newColorChoiceCode.toUpperCase(),
             stringValue: configForm.newColorChoiceName,
           } : null,
-          // Config details
           finishedGoodName: configForm.finishedGoodName || null,
+          finishedGoodImageUrl: configForm.finishedGoodImageUrl || null,
+          finishedGoodShortDesc: configForm.finishedGoodShortDesc || null,
+          finishedGoodLongDesc: configForm.finishedGoodLongDesc || null,
           wholesalePrice: configForm.wholesalePrice ? parseFloat(configForm.wholesalePrice) : null,
           retailPrice: configForm.retailPrice ? parseFloat(configForm.retailPrice) : null,
           dateRangeBegin: configForm.dateRangeBegin || null,
@@ -568,14 +568,12 @@ const finishes = Array.from(new Set(rules.map((r: { finish: string }) => r.finis
         } else {
           setLicensedConfigs((prev) => [...prev, saved]);
         }
-        // Refresh decorations list if we created a new one
         if (configForm.createNewLogo) {
           const decRes = await fetch(`/api/clients/${params.clientId}/decorations?type=licensed`);
           if (decRes.ok) {
             setDecorations(await decRes.json());
           }
         }
-        // Refresh options if we created new ones
         if (configForm.createNewPlacement || configForm.createNewColorChoice) {
           const optRes = await fetch(`/api/clients/${params.clientId}/options`);
           if (optRes.ok) {
@@ -727,7 +725,6 @@ const finishes = Array.from(new Set(rules.map((r: { finish: string }) => r.finis
           options: productOptions.length > 0 ? productOptions : null,
           inventory: inventory.length > 0 ? inventory : null,
           newOptions,
-          // Insignia fields
           insigniaEnabled,
           allowedPlacements: allowedPlacements.length > 0 ? allowedPlacements : null,
           finishPlacementRules: finishPlacementRules.length > 0 ? finishPlacementRules : null,
@@ -1492,7 +1489,7 @@ const finishes = Array.from(new Set(rules.map((r: { finish: string }) => r.finis
                       <tr>
                         <th className="px-4 py-2 text-left font-medium text-gray-600">Logo</th>
                         <th className="px-4 py-2 text-left font-medium text-gray-600">Placement</th>
-                        <th className="px-4 py-2 text-left font-medium text-gray-600">Color</th>
+                        <th className="px-4 py-2 text-left font-medium text-gray-600">Logo Color</th>
                         <th className="px-4 py-2 text-left font-medium text-gray-600">Date Range</th>
                         <th className="px-4 py-2 text-left font-medium text-gray-600">Status</th>
                         <th className="px-4 py-2"></th>
@@ -1735,10 +1732,10 @@ const finishes = Array.from(new Set(rules.map((r: { finish: string }) => r.finis
       {/* Licensed Configuration Modal */}
       {showLicensedModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-xl mx-4 max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between p-4 border-b sticky top-0 bg-white">
               <h3 className="font-semibold text-gray-900">
-                {editingConfig ? "Edit Configuration" : "Add Licensed Configuration"}
+                {editingConfig ? "Edit Licensed Configuration" : "Add Licensed Configuration"}
               </h3>
               <button
                 type="button"
@@ -1749,39 +1746,38 @@ const finishes = Array.from(new Set(rules.map((r: { finish: string }) => r.finis
               </button>
             </div>
 
-            <div className="p-4 space-y-4">
+            <div className="p-4 space-y-6">
               {/* Logo Selection */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Logo <span className="text-red-500">*</span>
-                </label>
+              <div className="space-y-3">
+                <div>
+                  <h4 className="text-sm font-semibold text-gray-900">Logo</h4>
+                  <p className="text-xs text-gray-500">The licensed logo to apply to this product</p>
+                </div>
                 
                 {!configForm.createNewLogo ? (
-                  <div className="space-y-2">
-                    <select
-                      value={configForm.decorationId}
-                      onChange={(e) => {
-                        if (e.target.value === "__new__") {
-                          setConfigForm({ ...configForm, createNewLogo: true, decorationId: "" });
-                        } else {
-                          setConfigForm({ ...configForm, decorationId: e.target.value });
-                        }
-                      }}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
-                    >
-                      <option value="">Select logo...</option>
-                      {decorations.map((d) => (
-                        <option key={d.id} value={d.id}>
-                          {d.teamName || d.productName} {d.league ? `(${d.league})` : ""}
-                        </option>
-                      ))}
-                      <option value="__new__">+ Create new logo</option>
-                    </select>
-                  </div>
+                  <select
+                    value={configForm.decorationId}
+                    onChange={(e) => {
+                      if (e.target.value === "__new__") {
+                        setConfigForm({ ...configForm, createNewLogo: true, decorationId: "" });
+                      } else {
+                        setConfigForm({ ...configForm, decorationId: e.target.value });
+                      }
+                    }}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
+                  >
+                    <option value="">Select existing logo...</option>
+                    {decorations.map((d) => (
+                      <option key={d.id} value={d.id}>
+                        {d.teamName || d.productName} {d.league ? `(${d.league})` : ""}
+                      </option>
+                    ))}
+                    <option value="__new__">+ Create new logo</option>
+                  </select>
                 ) : (
-                  <div className="space-y-3 p-3 bg-gray-50 rounded-lg">
+                  <div className="space-y-3 p-4 bg-gray-50 rounded-lg border border-gray-200">
                     <div className="flex justify-between items-center">
-                      <span className="text-sm font-medium text-gray-700">New Logo</span>
+                      <span className="text-sm font-medium text-gray-700">Create New Logo</span>
                       <button
                         type="button"
                         onClick={() => setConfigForm({ ...configForm, createNewLogo: false })}
@@ -1792,7 +1788,7 @@ const finishes = Array.from(new Set(rules.map((r: { finish: string }) => r.finis
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-xs text-gray-500 mb-1">Name *</label>
+                        <label className="block text-xs text-gray-500 mb-1">Logo Name *</label>
                         <input
                           type="text"
                           value={configForm.newLogoName}
@@ -1802,7 +1798,7 @@ const finishes = Array.from(new Set(rules.map((r: { finish: string }) => r.finis
                         />
                       </div>
                       <div>
-                        <label className="block text-xs text-gray-500 mb-1">Product # *</label>
+                        <label className="block text-xs text-gray-500 mb-1">Logo Product # *</label>
                         <input
                           type="text"
                           value={configForm.newLogoNumber}
@@ -1810,6 +1806,7 @@ const finishes = Array.from(new Set(rules.map((r: { finish: string }) => r.finis
                           placeholder="CC-NCAA-ALA-001"
                           className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
                         />
+                        <p className="text-xs text-gray-400 mt-1">Unique identifier for this logo</p>
                       </div>
                       <div>
                         <label className="block text-xs text-gray-500 mb-1">League</label>
@@ -1817,7 +1814,7 @@ const finishes = Array.from(new Set(rules.map((r: { finish: string }) => r.finis
                           type="text"
                           value={configForm.newLogoLeague}
                           onChange={(e) => setConfigForm({ ...configForm, newLogoLeague: e.target.value.toUpperCase() })}
-                          placeholder="NCAA"
+                          placeholder="NCAA, MLB, NFL"
                           className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
                         />
                       </div>
@@ -1827,7 +1824,7 @@ const finishes = Array.from(new Set(rules.map((r: { finish: string }) => r.finis
                           type="text"
                           value={configForm.newLogoTeamCode}
                           onChange={(e) => setConfigForm({ ...configForm, newLogoTeamCode: e.target.value.toUpperCase() })}
-                          placeholder="ALA"
+                          placeholder="ALA, UGA, NYY"
                           className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
                         />
                       </div>
@@ -1842,202 +1839,280 @@ const finishes = Array.from(new Set(rules.map((r: { finish: string }) => r.finis
                         />
                       </div>
                       <div>
-                        <label className="block text-xs text-gray-500 mb-1">Logo Price</label>
-                        <input
-                          type="number"
-                          step="0.01"
-                          value={configForm.newLogoPrice}
-                          onChange={(e) => setConfigForm({ ...configForm, newLogoPrice: e.target.value })}
-                          placeholder="12.00"
-                          className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
-                        />
+                        <label className="block text-xs text-gray-500 mb-1">Logo Upcharge</label>
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">$</span>
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={configForm.newLogoPrice}
+                            onChange={(e) => setConfigForm({ ...configForm, newLogoPrice: e.target.value })}
+                            placeholder="12.00"
+                            className="w-full pl-7 pr-3 py-2 border border-gray-200 rounded-lg text-sm"
+                          />
+                        </div>
                       </div>
                     </div>
                   </div>
                 )}
               </div>
 
-              {/* Placement Selection */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Placement <span className="text-red-500">*</span>
-                </label>
-                
-                {!configForm.createNewPlacement ? (
-                  <select
-                    value={configForm.placement}
-                    onChange={(e) => {
-                      if (e.target.value === "__new__") {
-                        setConfigForm({ ...configForm, createNewPlacement: true, placement: "" });
-                      } else {
-                        setConfigForm({ ...configForm, placement: e.target.value });
-                      }
-                    }}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
-                  >
-                    <option value="">Select placement...</option>
-                    {placements.map((p) => (
-                      <option key={p.id} value={p.keyCode}>{p.stringValue}</option>
-                    ))}
-                    <option value="__new__">+ Create new placement</option>
-                  </select>
-                ) : (
-                  <div className="flex gap-2 p-3 bg-gray-50 rounded-lg">
-                    <input
-                      type="text"
-                      value={configForm.newPlacementCode}
-                      onChange={(e) => setConfigForm({ ...configForm, newPlacementCode: e.target.value.toUpperCase() })}
-                      placeholder="Code (LC)"
-                      className="w-24 px-3 py-2 border border-gray-200 rounded-lg text-sm"
-                    />
-                    <input
-                      type="text"
-                      value={configForm.newPlacementName}
-                      onChange={(e) => setConfigForm({ ...configForm, newPlacementName: e.target.value })}
-                      placeholder="Name (Left Chest)"
-                      className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setConfigForm({ ...configForm, createNewPlacement: false })}
-                      className="text-xs text-blue-600 hover:underline px-2"
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              {/* Color Choice Selection */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Color Choice <span className="text-red-500">*</span>
-                </label>
-                
-                {!configForm.createNewColorChoice ? (
-                  <select
-                    value={configForm.colorChoice}
-                    onChange={(e) => {
-                      if (e.target.value === "__new__") {
-                        setConfigForm({ ...configForm, createNewColorChoice: true, colorChoice: "" });
-                      } else {
-                        setConfigForm({ ...configForm, colorChoice: e.target.value });
-                      }
-                    }}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
-                  >
-                    <option value="">Select color choice...</option>
-                    {colorChoices.map((c) => (
-                      <option key={c.id} value={c.keyCode}>{c.stringValue}</option>
-                    ))}
-                    <option value="__new__">+ Create new color choice</option>
-                  </select>
-                ) : (
-                  <div className="flex gap-2 p-3 bg-gray-50 rounded-lg">
-                    <input
-                      type="text"
-                      value={configForm.newColorChoiceCode}
-                      onChange={(e) => setConfigForm({ ...configForm, newColorChoiceCode: e.target.value.toUpperCase() })}
-                      placeholder="Code (RED)"
-                      className="w-24 px-3 py-2 border border-gray-200 rounded-lg text-sm"
-                    />
-                    <input
-                      type="text"
-                      value={configForm.newColorChoiceName}
-                      onChange={(e) => setConfigForm({ ...configForm, newColorChoiceName: e.target.value })}
-                      placeholder="Name (Team Red)"
-                      className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setConfigForm({ ...configForm, createNewColorChoice: false })}
-                      className="text-xs text-blue-600 hover:underline px-2"
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              {/* Finished Good Details */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Finished Good Name
-                </label>
-                <input
-                  type="text"
-                  value={configForm.finishedGoodName}
-                  onChange={(e) => setConfigForm({ ...configForm, finishedGoodName: e.target.value })}
-                  placeholder="e.g., Seaside Polo - Alabama (auto-generated if blank)"
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
-                />
-              </div>
-
+              {/* Placement & Logo Color */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Price Override
+                    Placement <span className="text-red-500">*</span>
+                  </label>
+                  <p className="text-xs text-gray-500 mb-2">Where the logo appears on the product</p>
+                  
+                  {!configForm.createNewPlacement ? (
+                    <select
+                      value={configForm.placement}
+                      onChange={(e) => {
+                        if (e.target.value === "__new__") {
+                          setConfigForm({ ...configForm, createNewPlacement: true, placement: "" });
+                        } else {
+                          setConfigForm({ ...configForm, placement: e.target.value });
+                        }
+                      }}
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
+                    >
+                      <option value="">Select...</option>
+                      {placements.map((p) => (
+                        <option key={p.id} value={p.keyCode}>{p.stringValue}</option>
+                      ))}
+                      <option value="__new__">+ Create new</option>
+                    </select>
+                  ) : (
+                    <div className="space-y-2">
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={configForm.newPlacementCode}
+                          onChange={(e) => setConfigForm({ ...configForm, newPlacementCode: e.target.value.toUpperCase() })}
+                          placeholder="LC"
+                          className="w-20 px-3 py-2 border border-gray-200 rounded-lg text-sm"
+                        />
+                        <input
+                          type="text"
+                          value={configForm.newPlacementName}
+                          onChange={(e) => setConfigForm({ ...configForm, newPlacementName: e.target.value })}
+                          placeholder="Left Chest"
+                          className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm"
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setConfigForm({ ...configForm, createNewPlacement: false })}
+                        className="text-xs text-blue-600 hover:underline"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Logo Color <span className="text-red-500">*</span>
+                  </label>
+                  <p className="text-xs text-gray-500 mb-2">Color variant of the logo (e.g., Red, White)</p>
+                  
+                  {!configForm.createNewColorChoice ? (
+                    <select
+                      value={configForm.colorChoice}
+                      onChange={(e) => {
+                        if (e.target.value === "__new__") {
+                          setConfigForm({ ...configForm, createNewColorChoice: true, colorChoice: "" });
+                        } else {
+                          setConfigForm({ ...configForm, colorChoice: e.target.value });
+                        }
+                      }}
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
+                    >
+                      <option value="">Select...</option>
+                      {colorChoices.map((c) => (
+                        <option key={c.id} value={c.keyCode}>{c.stringValue}</option>
+                      ))}
+                      <option value="__new__">+ Create new</option>
+                    </select>
+                  ) : (
+                    <div className="space-y-2">
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={configForm.newColorChoiceCode}
+                          onChange={(e) => setConfigForm({ ...configForm, newColorChoiceCode: e.target.value.toUpperCase() })}
+                          placeholder="RED"
+                          className="w-20 px-3 py-2 border border-gray-200 rounded-lg text-sm"
+                        />
+                        <input
+                          type="text"
+                          value={configForm.newColorChoiceName}
+                          onChange={(e) => setConfigForm({ ...configForm, newColorChoiceName: e.target.value })}
+                          placeholder="Team Red"
+                          className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm"
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setConfigForm({ ...configForm, createNewColorChoice: false })}
+                        className="text-xs text-blue-600 hover:underline"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Finished Good Display */}
+              <div className="space-y-3">
+                <div>
+                  <h4 className="text-sm font-semibold text-gray-900">Finished Good Display</h4>
+                  <p className="text-xs text-gray-500">How this product + logo combination appears to customers</p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Display Name
                   </label>
                   <input
-                    type="number"
-                    step="0.01"
-                    value={configForm.wholesalePrice}
-                    onChange={(e) => setConfigForm({ ...configForm, wholesalePrice: e.target.value })}
-                    placeholder="Leave blank for default"
+                    type="text"
+                    value={configForm.finishedGoodName}
+                    onChange={(e) => setConfigForm({ ...configForm, finishedGoodName: e.target.value })}
+                    placeholder="Auto-generated if blank (e.g., Seaside Polo - Alabama)"
                     className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
                   />
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Retail Override
+                    Image URL
                   </label>
                   <input
-                    type="number"
-                    step="0.01"
-                    value={configForm.retailPrice}
-                    onChange={(e) => setConfigForm({ ...configForm, retailPrice: e.target.value })}
-                    placeholder="Leave blank for default"
+                    type="text"
+                    value={configForm.finishedGoodImageUrl}
+                    onChange={(e) => setConfigForm({ ...configForm, finishedGoodImageUrl: e.target.value })}
+                    placeholder="https://... (falls back to base product image if blank)"
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Short Description
+                  </label>
+                  <input
+                    type="text"
+                    value={configForm.finishedGoodShortDesc}
+                    onChange={(e) => setConfigForm({ ...configForm, finishedGoodShortDesc: e.target.value })}
+                    placeholder="Brief description for product lists"
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Long Description
+                  </label>
+                  <textarea
+                    value={configForm.finishedGoodLongDesc}
+                    onChange={(e) => setConfigForm({ ...configForm, finishedGoodLongDesc: e.target.value })}
+                    placeholder="Detailed description shown on product detail page"
+                    rows={3}
                     className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              {/* Pricing */}
+              <div className="space-y-3">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Date Range Begin
-                  </label>
-                  <input
-                    type="date"
-                    value={configForm.dateRangeBegin}
-                    onChange={(e) => setConfigForm({ ...configForm, dateRangeBegin: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
-                  />
+                  <h4 className="text-sm font-semibold text-gray-900">Pricing Overrides</h4>
+                  <p className="text-xs text-gray-500">Override the default price (base + logo) for this combination</p>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Date Range End
-                  </label>
-                  <input
-                    type="date"
-                    value={configForm.dateRangeEnd}
-                    onChange={(e) => setConfigForm({ ...configForm, dateRangeEnd: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
-                  />
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Wholesale Price
+                    </label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">$</span>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={configForm.wholesalePrice}
+                        onChange={(e) => setConfigForm({ ...configForm, wholesalePrice: e.target.value })}
+                        placeholder="Default"
+                        className="w-full pl-7 pr-3 py-2 border border-gray-200 rounded-lg text-sm"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Retail Price
+                    </label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">$</span>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={configForm.retailPrice}
+                        onChange={(e) => setConfigForm({ ...configForm, retailPrice: e.target.value })}
+                        placeholder="Default"
+                        className="w-full pl-7 pr-3 py-2 border border-gray-200 rounded-lg text-sm"
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              <label className="flex items-center gap-3">
-                <input
-                  type="checkbox"
-                  checked={configForm.enabled}
-                  onChange={(e) => setConfigForm({ ...configForm, enabled: e.target.checked })}
-                  className="rounded border-gray-300"
-                />
-                <span className="text-sm">Active</span>
-              </label>
+              {/* Availability */}
+              <div className="space-y-3">
+                <div>
+                  <h4 className="text-sm font-semibold text-gray-900">Availability</h4>
+                  <p className="text-xs text-gray-500">When this configuration is available for purchase</p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Start Date
+                    </label>
+                    <input
+                      type="date"
+                      value={configForm.dateRangeBegin}
+                      onChange={(e) => setConfigForm({ ...configForm, dateRangeBegin: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      End Date
+                    </label>
+                    <input
+                      type="date"
+                      value={configForm.dateRangeEnd}
+                      onChange={(e) => setConfigForm({ ...configForm, dateRangeEnd: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
+                    />
+                  </div>
+                </div>
+
+                <label className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    checked={configForm.enabled}
+                    onChange={(e) => setConfigForm({ ...configForm, enabled: e.target.checked })}
+                    className="rounded border-gray-300"
+                  />
+                  <span className="text-sm">Active</span>
+                </label>
+              </div>
             </div>
 
             <div className="flex justify-end gap-3 p-4 border-t sticky bottom-0 bg-white">
