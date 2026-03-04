@@ -104,9 +104,10 @@ await prisma.syncLog.create({
     environment,
     syncMode: "Full",
     recordCount: result.recordCount || 0,
-    success: result.success ?? false,
-    error: result.error || null,
-    details: result.details ? JSON.stringify(result.details) : null,
+    status: result.success ? "success" : "failed",
+    errorMessage: result.error || null,
+    errorDetails: result.details ? JSON.stringify(result.details) : null,
+    triggeredBy: "manual",
   },
 });
 
