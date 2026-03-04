@@ -46,14 +46,15 @@ export default async function ClientLayout({ children, params }: ClientLayoutPro
 
   const navigation = [
     { name: "Dashboard", href: `/clients/${client.id}`, icon: LayoutDashboard },
+    { name: "Products", href: `/clients/${client.id}/products`, icon: Package },
     { name: "Options", href: `/clients/${client.id}/options`, icon: List },
     { name: "Size Scales", href: `/clients/${client.id}/sizing`, icon: Ruler },
-    { name: "Products", href: `/clients/${client.id}/products`, icon: Package },
     { name: "Images", href: `/clients/${client.id}/images`, icon: Image },
     { name: "Inventory", href: `/clients/${client.id}/inventory`, icon: Layers },
     { name: "Customers", href: `/clients/${client.id}/customers`, icon: Users },
     { name: "Sync", href: `/clients/${client.id}/sync`, icon: RefreshCw },
     { name: "Settings", href: `/clients/${client.id}/settings`, icon: Settings },
+    { name: "Sync Logs", href: `/clients/${clientId}/sync-logs`, icon: History }
   ];
 
   return (
