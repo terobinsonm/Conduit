@@ -17,6 +17,11 @@ export async function GET(request: NextRequest, { params }: Params) {
 
   const customer = await prisma.customer.findFirst({
     where: { id: params.customerId, clientId: params.clientId },
+    include: {
+      stores: {
+        orderBy: { name: "asc" },
+      },
+    },
   });
 
   if (!customer) {
@@ -38,32 +43,12 @@ export async function PATCH(request: NextRequest, { params }: Params) {
   try {
     const body = await request.json();
 
-    // Check for duplicate if customerCode changed
-    if (body.customerCode) {
-      const existing = await prisma.customer.findFirst({
-        where: {
-          clientId: params.clientId,
-          customerCode: body.customerCode,
-          storeCode: body.storeCode || null,
-          NOT: { id: params.customerId },
-        },
-      });
-      if (existing) {
-        return NextResponse.json(
-          { error: "Customer with this code already exists" },
-          { status: 400 }
-        );
-      }
-    }
-
     const customer = await prisma.customer.update({
       where: { id: params.customerId },
       data: {
         customerCode: body.customerCode,
         name: body.name,
-        isBillTo: body.isBillTo,
         enabled: body.enabled,
-        storeCode: body.storeCode || null,
         address1: body.address1 || null,
         address2: body.address2 || null,
         city: body.city || null,
@@ -83,12 +68,7 @@ export async function PATCH(request: NextRequest, { params }: Params) {
         classificationCode: body.classificationCode || null,
         channelCode: body.channelCode || null,
         typeCode: body.typeCode || null,
-        buyingGroupCode: body.buyingGroupCode || null,
         creditStatusCode: body.creditStatusCode || null,
-        commissionPercentage: parseFloat(body.commissionPercentage) || 0,
-        dba: body.dba || null,
-        paymentsVisibility: body.paymentsVisibility || null,
-        referenceNumber: body.referenceNumber || null,
       },
     });
 
@@ -109,6 +89,7 @@ export async function DELETE(request: NextRequest, { params }: Params) {
   if (!membership) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   try {
+    // This will cascade delete all stores too
     await prisma.customer.delete({
       where: { id: params.customerId },
     });
