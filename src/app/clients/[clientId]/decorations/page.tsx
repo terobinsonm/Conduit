@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { Plus, Search, Loader2, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
@@ -30,10 +30,21 @@ export default function DecorationsPage() {
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<"" | "insignia" | "licensed">("");
   const [menuOpen, setMenuOpen] = useState<string | null>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetchDecorations();
   }, [params.clientId, typeFilter]);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setMenuOpen(null);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   async function fetchDecorations() {
     setLoading(true);
@@ -126,7 +137,7 @@ export default function DecorationsPage() {
           </p>
         </div>
       ) : (
-        <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+        <div className="bg-white border border-gray-200 rounded-lg">
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
@@ -207,7 +218,7 @@ export default function DecorationsPage() {
                     </span>
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <div className="relative">
+                    <div className="relative" ref={menuOpen === decoration.id ? menuRef : null}>
                       <button
                         onClick={() => setMenuOpen(menuOpen === decoration.id ? null : decoration.id)}
                         className="p-1 hover:bg-gray-100 rounded"
@@ -215,20 +226,20 @@ export default function DecorationsPage() {
                         <MoreHorizontal className="h-4 w-4 text-gray-500" />
                       </button>
                       {menuOpen === decoration.id && (
-                        <div className="absolute right-0 mt-1 w-36 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
+                        <div className="absolute right-0 top-8 w-36 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
                           <button
                             onClick={() => {
                               router.push(`/clients/${params.clientId}/decorations/${decoration.id}`);
                               setMenuOpen(null);
                             }}
-                            className="flex items-center gap-2 w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                            className="flex items-center gap-2 w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-t-lg"
                           >
                             <Pencil className="h-4 w-4" />
                             Edit
                           </button>
                           <button
                             onClick={() => handleDelete(decoration.id)}
-                            className="flex items-center gap-2 w-full px-3 py-2 text-sm text-red-600 hover:bg-gray-50"
+                            className="flex items-center gap-2 w-full px-3 py-2 text-sm text-red-600 hover:bg-gray-50 rounded-b-lg"
                           >
                             <Trash2 className="h-4 w-4" />
                             Delete
