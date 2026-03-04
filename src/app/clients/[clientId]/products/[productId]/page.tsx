@@ -10,6 +10,7 @@ import {
   Trash2,
   Upload,
   Plus,
+  Check,
 } from "lucide-react";
 import { ClassificationCombobox } from "../_components/classification-combobox";
 
@@ -86,12 +87,10 @@ interface Product {
   ignoreDiscounts: boolean;
   imageUrl: string | null;
   options: string | null;
-  // Insignia fields
   insigniaEnabled: boolean;
   allowedPlacements: string | null;
   finishPlacementRules: string | null;
   insigniaColorOptions: string | null;
-  // Relations
   inventory: {
     sizeCode: string;
     availableQuantity: number;
@@ -151,18 +150,47 @@ export default function EditProductPage() {
   // Insignia state
   const [insigniaEnabled, setInsigniaEnabled] = useState(false);
   const [allowedPlacements, setAllowedPlacements] = useState<string[]>([]);
+  const [allowedFinishTypes, setAllowedFinishTypes] = useState<string[]>([]);
   const [finishPlacementRules, setFinishPlacementRules] = useState<{ finish: string; placement: string }[]>([]);
-  const [insigniaColorOptions, setInsigniaColorOptions] = useState<string[]>([]);
+  
+  // Inline creation for insignia
+  const [showNewPlacement, setShowNewPlacement] = useState(false);
+  const [newPlacementCode, setNewPlacementCode] = useState("");
+  const [newPlacementName, setNewPlacementName] = useState("");
+  const [showNewFinish, setShowNewFinish] = useState(false);
+  const [newFinishCode, setNewFinishCode] = useState("");
+  const [newFinishName, setNewFinishName] = useState("");
 
   // Licensed configurations state
   const [decorations, setDecorations] = useState<Decoration[]>([]);
   const [licensedConfigs, setLicensedConfigs] = useState<LicensedConfig[]>([]);
   const [showLicensedModal, setShowLicensedModal] = useState(false);
   const [editingConfig, setEditingConfig] = useState<LicensedConfig | null>(null);
+  const [savingConfig, setSavingConfig] = useState(false);
+  
+  // Licensed config form - supports inline creation
   const [configForm, setConfigForm] = useState({
+    // Existing logo selection
     decorationId: "",
+    // OR create new logo
+    createNewLogo: false,
+    newLogoName: "",
+    newLogoNumber: "",
+    newLogoLeague: "",
+    newLogoTeamCode: "",
+    newLogoTeamName: "",
+    newLogoPrice: "",
+    // Placement
     placement: "",
+    createNewPlacement: false,
+    newPlacementCode: "",
+    newPlacementName: "",
+    // Color choice
     colorChoice: "",
+    createNewColorChoice: false,
+    newColorChoiceCode: "",
+    newColorChoiceName: "",
+    // Config details
     finishedGoodName: "",
     wholesalePrice: "",
     retailPrice: "",
@@ -225,16 +253,13 @@ export default function EditProductPage() {
       }
       if (productData.finishPlacementRules) {
         try {
-          setFinishPlacementRules(JSON.parse(productData.finishPlacementRules));
+          const rules = JSON.parse(productData.finishPlacementRules);
+          setFinishPlacementRules(rules);
+          // Extract unique finish types from rules
+          const finishes = [...new Set(rules.map((r: { finish: string }) => r.finish))];
+          setAllowedFinishTypes(finishes as string[]);
         } catch {
           setFinishPlacementRules([]);
-        }
-      }
-      if (productData.insigniaColorOptions) {
-        try {
-          setInsigniaColorOptions(JSON.parse(productData.insigniaColorOptions));
-        } catch {
-          setInsigniaColorOptions([]);
         }
       }
 
@@ -363,13 +388,72 @@ export default function EditProductPage() {
     });
   }
 
+  // Insignia inline creation
+  function addNewPlacement() {
+    if (!newPlacementCode.trim() || !newPlacementName.trim()) return;
+    const code = newPlacementCode.toUpperCase();
+    
+    // Add to newOptions for creation on save
+    setNewOptions((prev) => [
+      ...prev.filter((o) => !(o.elementType === "Placement" && o.keyCode === code)),
+      { elementType: "Placement", keyCode: code, stringValue: newPlacementName },
+    ]);
+    
+    // Add to local options list for immediate display
+    setOptions((prev) => [
+      ...prev,
+      { id: `new-${code}`, elementType: "Placement", keyCode: code, stringValue: newPlacementName },
+    ]);
+    
+    // Add to allowed placements
+    setAllowedPlacements((prev) => [...prev, code]);
+    
+    setNewPlacementCode("");
+    setNewPlacementName("");
+    setShowNewPlacement(false);
+  }
+
+  function addNewFinishType() {
+    if (!newFinishCode.trim() || !newFinishName.trim()) return;
+    const code = newFinishCode.toUpperCase();
+    
+    setNewOptions((prev) => [
+      ...prev.filter((o) => !(o.elementType === "FinishType" && o.keyCode === code)),
+      { elementType: "FinishType", keyCode: code, stringValue: newFinishName },
+    ]);
+    
+    setOptions((prev) => [
+      ...prev,
+      { id: `new-${code}`, elementType: "FinishType", keyCode: code, stringValue: newFinishName },
+    ]);
+    
+    setAllowedFinishTypes((prev) => [...prev, code]);
+    
+    setNewFinishCode("");
+    setNewFinishName("");
+    setShowNewFinish(false);
+  }
+
   // Licensed config functions
   function openAddConfigModal() {
     setEditingConfig(null);
     setConfigForm({
       decorationId: "",
+      createNewLogo: false,
+      newLogoName: "",
+      newLogoNumber: "",
+      newLogoLeague: "",
+      newLogoTeamCode: "",
+      newLogoTeamName: "",
+      newLogoPrice: "",
       placement: "",
+      createNewPlacement: false,
+      newPlacementCode: "",
+      newPlacementName: "",
       colorChoice: "",
+      createNewColorChoice: false,
+      newColorChoiceCode: "",
+      newColorChoiceName: "",
       finishedGoodName: "",
       wholesalePrice: "",
       retailPrice: "",
@@ -384,8 +468,21 @@ export default function EditProductPage() {
     setEditingConfig(config);
     setConfigForm({
       decorationId: config.decorationId,
+      createNewLogo: false,
+      newLogoName: "",
+      newLogoNumber: "",
+      newLogoLeague: "",
+      newLogoTeamCode: "",
+      newLogoTeamName: "",
+      newLogoPrice: "",
       placement: config.placement,
+      createNewPlacement: false,
+      newPlacementCode: "",
+      newPlacementName: "",
       colorChoice: config.colorChoice,
+      createNewColorChoice: false,
+      newColorChoiceCode: "",
+      newColorChoiceName: "",
       finishedGoodName: config.finishedGoodName || "",
       wholesalePrice: config.wholesalePrice?.toString() || "",
       retailPrice: config.retailPrice?.toString() || "",
@@ -397,45 +494,104 @@ export default function EditProductPage() {
   }
 
   async function saveConfig() {
-    if (!configForm.decorationId || !configForm.placement || !configForm.colorChoice) {
-      alert("Logo, placement, and color choice are required");
-      return;
-    }
+    setSavingConfig(true);
+    
+    try {
+      // Validate required fields
+      const needsLogo = configForm.createNewLogo 
+        ? (configForm.newLogoName && configForm.newLogoNumber)
+        : configForm.decorationId;
+      const needsPlacement = configForm.createNewPlacement
+        ? (configForm.newPlacementCode && configForm.newPlacementName)
+        : configForm.placement;
+      const needsColorChoice = configForm.createNewColorChoice
+        ? (configForm.newColorChoiceCode && configForm.newColorChoiceName)
+        : configForm.colorChoice;
 
-    const method = editingConfig ? "PATCH" : "POST";
-    const url = editingConfig
-      ? `/api/clients/${params.clientId}/products/${params.productId}/licensed-configs/${editingConfig.id}`
-      : `/api/clients/${params.clientId}/products/${params.productId}/licensed-configs`;
-
-    const res = await fetch(url, {
-      method,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        decorationId: configForm.decorationId,
-        placement: configForm.placement,
-        colorChoice: configForm.colorChoice,
-        finishedGoodName: configForm.finishedGoodName || null,
-        wholesalePrice: configForm.wholesalePrice ? parseFloat(configForm.wholesalePrice) : null,
-        retailPrice: configForm.retailPrice ? parseFloat(configForm.retailPrice) : null,
-        dateRangeBegin: configForm.dateRangeBegin || null,
-        dateRangeEnd: configForm.dateRangeEnd || null,
-        enabled: configForm.enabled,
-      }),
-    });
-
-    if (res.ok) {
-      const saved = await res.json();
-      if (editingConfig) {
-        setLicensedConfigs((prev) =>
-          prev.map((c) => (c.id === saved.id ? saved : c))
-        );
-      } else {
-        setLicensedConfigs((prev) => [...prev, saved]);
+      if (!needsLogo || !needsPlacement || !needsColorChoice) {
+        alert("Logo, placement, and color choice are required");
+        setSavingConfig(false);
+        return;
       }
-      setShowLicensedModal(false);
-    } else {
-      const error = await res.json();
-      alert(error.error || "Failed to save configuration");
+
+      // Use the comprehensive endpoint that handles all creation
+      const method = editingConfig ? "PATCH" : "POST";
+      const url = editingConfig
+        ? `/api/clients/${params.clientId}/products/${params.productId}/licensed-configs/${editingConfig.id}`
+        : `/api/clients/${params.clientId}/products/${params.productId}/licensed-configs`;
+
+      const res = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          // Existing logo or new logo data
+          decorationId: configForm.createNewLogo ? null : configForm.decorationId,
+          createNewLogo: configForm.createNewLogo,
+          newLogo: configForm.createNewLogo ? {
+            productNumber: configForm.newLogoNumber,
+            productName: configForm.newLogoName,
+            league: configForm.newLogoLeague,
+            teamCode: configForm.newLogoTeamCode,
+            teamName: configForm.newLogoTeamName,
+            wholesalePrice: parseFloat(configForm.newLogoPrice) || 0,
+          } : null,
+          // Placement
+          placement: configForm.createNewPlacement ? configForm.newPlacementCode.toUpperCase() : configForm.placement,
+          createNewPlacement: configForm.createNewPlacement,
+          newPlacement: configForm.createNewPlacement ? {
+            keyCode: configForm.newPlacementCode.toUpperCase(),
+            stringValue: configForm.newPlacementName,
+          } : null,
+          // Color choice
+          colorChoice: configForm.createNewColorChoice ? configForm.newColorChoiceCode.toUpperCase() : configForm.colorChoice,
+          createNewColorChoice: configForm.createNewColorChoice,
+          newColorChoice: configForm.createNewColorChoice ? {
+            keyCode: configForm.newColorChoiceCode.toUpperCase(),
+            stringValue: configForm.newColorChoiceName,
+          } : null,
+          // Config details
+          finishedGoodName: configForm.finishedGoodName || null,
+          wholesalePrice: configForm.wholesalePrice ? parseFloat(configForm.wholesalePrice) : null,
+          retailPrice: configForm.retailPrice ? parseFloat(configForm.retailPrice) : null,
+          dateRangeBegin: configForm.dateRangeBegin || null,
+          dateRangeEnd: configForm.dateRangeEnd || null,
+          enabled: configForm.enabled,
+        }),
+      });
+
+      if (res.ok) {
+        const saved = await res.json();
+        if (editingConfig) {
+          setLicensedConfigs((prev) =>
+            prev.map((c) => (c.id === saved.id ? saved : c))
+          );
+        } else {
+          setLicensedConfigs((prev) => [...prev, saved]);
+        }
+        // Refresh decorations list if we created a new one
+        if (configForm.createNewLogo) {
+          const decRes = await fetch(`/api/clients/${params.clientId}/decorations?type=licensed`);
+          if (decRes.ok) {
+            setDecorations(await decRes.json());
+          }
+        }
+        // Refresh options if we created new ones
+        if (configForm.createNewPlacement || configForm.createNewColorChoice) {
+          const optRes = await fetch(`/api/clients/${params.clientId}/options`);
+          if (optRes.ok) {
+            setOptions(await optRes.json());
+          }
+        }
+        setShowLicensedModal(false);
+      } else {
+        const error = await res.json();
+        alert(error.error || "Failed to save configuration");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Failed to save configuration");
+    } finally {
+      setSavingConfig(false);
     }
   }
 
@@ -575,7 +731,7 @@ export default function EditProductPage() {
           insigniaEnabled,
           allowedPlacements: allowedPlacements.length > 0 ? allowedPlacements : null,
           finishPlacementRules: finishPlacementRules.length > 0 ? finishPlacementRules : null,
-          insigniaColorOptions: insigniaColorOptions.length > 0 ? insigniaColorOptions : null,
+          insigniaColorOptions: allowedFinishTypes.length > 0 ? allowedFinishTypes : null,
         }),
       });
 
@@ -667,6 +823,7 @@ export default function EditProductPage() {
 
       <div className="grid grid-cols-3 gap-6">
         <div className="col-span-2 space-y-6">
+          {/* Basic Information */}
           <div className="bg-white border border-gray-200 rounded-lg p-6">
             <h2 className="text-sm font-semibold text-gray-900 mb-4">Basic information</h2>
             <div className="space-y-4">
@@ -711,6 +868,7 @@ export default function EditProductPage() {
             </div>
           </div>
 
+          {/* Media */}
           <div className="bg-white border border-gray-200 rounded-lg p-6">
             <h2 className="text-sm font-semibold text-gray-900 mb-4">Media</h2>
             {product.imageUrl ? (
@@ -753,6 +911,7 @@ export default function EditProductPage() {
             )}
           </div>
 
+          {/* Pricing */}
           <div className="bg-white border border-gray-200 rounded-lg p-6">
             <h2 className="text-sm font-semibold text-gray-900 mb-4">Pricing</h2>
             <div className="grid grid-cols-2 gap-4">
@@ -813,6 +972,7 @@ export default function EditProductPage() {
             </div>
           </div>
 
+          {/* Sizes / Options */}
           <div className="bg-white border border-gray-200 rounded-lg p-6">
             <h2 className="text-sm font-semibold text-gray-900 mb-2">
               Sizes / Options <span className="text-red-500">*</span>
@@ -913,6 +1073,7 @@ export default function EditProductPage() {
             </div>
           </div>
 
+          {/* Inventory */}
           {variants.length > 0 && (
             <div className="bg-white border border-gray-200 rounded-lg p-6">
               <h2 className="text-sm font-semibold text-gray-900 mb-4">
@@ -1004,7 +1165,7 @@ export default function EditProductPage() {
             </div>
           )}
 
-          {/* Insignia Settings - Only for base products (Type 2) */}
+          {/* Insignia Settings */}
           {isBaseProduct && (
             <div className="bg-white border border-gray-200 rounded-lg p-6">
               <h2 className="text-sm font-semibold text-gray-900 mb-4">Insignia Settings</h2>
@@ -1025,143 +1186,274 @@ export default function EditProductPage() {
 
                 {insigniaEnabled && (
                   <>
+                    {/* Placements */}
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         Allowed Placements
                       </label>
-                      <div className="flex flex-wrap gap-2">
-                        {placements.map((p) => (
-                          <label
-                            key={p.id}
-                            className={`inline-flex items-center gap-2 px-3 py-1.5 border rounded-lg cursor-pointer text-sm ${
-                              allowedPlacements.includes(p.keyCode)
-                                ? "bg-gray-900 text-white border-gray-900"
-                                : "bg-white text-gray-700 border-gray-200 hover:border-gray-300"
-                            }`}
+                      <div className="flex flex-wrap gap-2 mb-2">
+                        {allowedPlacements.map((code) => {
+                          const placement = placements.find((p) => p.keyCode === code);
+                          return (
+                            <span
+                              key={code}
+                              className="inline-flex items-center gap-1 px-3 py-1.5 bg-gray-900 text-white rounded-lg text-sm"
+                            >
+                              {placement?.stringValue || code}
+                              <button
+                                type="button"
+                                onClick={() => setAllowedPlacements(allowedPlacements.filter((p) => p !== code))}
+                                className="hover:text-red-300"
+                              >
+                                <X className="h-3 w-3" />
+                              </button>
+                            </span>
+                          );
+                        })}
+                        {!showNewPlacement && (
+                          <button
+                            type="button"
+                            onClick={() => setShowNewPlacement(true)}
+                            className="inline-flex items-center gap-1 px-3 py-1.5 border border-dashed border-gray-300 text-gray-500 rounded-lg text-sm hover:border-gray-400"
                           >
-                            <input
-                              type="checkbox"
-                              checked={allowedPlacements.includes(p.keyCode)}
-                              onChange={(e) => {
-                                if (e.target.checked) {
-                                  setAllowedPlacements([...allowedPlacements, p.keyCode]);
-                                } else {
-                                  setAllowedPlacements(allowedPlacements.filter((x) => x !== p.keyCode));
-                                }
-                              }}
-                              className="hidden"
-                            />
-                            {p.stringValue}
-                          </label>
-                        ))}
+                            <Plus className="h-3 w-3" />
+                            Add
+                          </button>
+                        )}
                       </div>
-                      {placements.length === 0 && (
-                        <p className="text-xs text-gray-400">No placements defined. Add them in Options.</p>
+                      
+                      {showNewPlacement && (
+                        <div className="flex gap-2 p-3 bg-gray-50 rounded-lg">
+                          <select
+                            className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm"
+                            onChange={(e) => {
+                              if (e.target.value === "__new__") {
+                                // Keep form open for new creation
+                              } else if (e.target.value) {
+                                setAllowedPlacements([...allowedPlacements, e.target.value]);
+                                setShowNewPlacement(false);
+                              }
+                            }}
+                            defaultValue=""
+                          >
+                            <option value="" disabled>Select existing...</option>
+                            {placements
+                              .filter((p) => !allowedPlacements.includes(p.keyCode))
+                              .map((p) => (
+                                <option key={p.id} value={p.keyCode}>{p.stringValue}</option>
+                              ))}
+                            <option value="__new__">+ Create new placement</option>
+                          </select>
+                          <button
+                            type="button"
+                            onClick={() => setShowNewPlacement(false)}
+                            className="px-3 py-2 text-gray-500 hover:text-gray-700"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        </div>
+                      )}
+                      
+                      {showNewPlacement && (
+                        <div className="flex gap-2 mt-2">
+                          <input
+                            type="text"
+                            value={newPlacementCode}
+                            onChange={(e) => setNewPlacementCode(e.target.value.toUpperCase())}
+                            placeholder="Code (e.g., LC)"
+                            className="w-24 px-3 py-2 border border-gray-200 rounded-lg text-sm"
+                          />
+                          <input
+                            type="text"
+                            value={newPlacementName}
+                            onChange={(e) => setNewPlacementName(e.target.value)}
+                            placeholder="Name (e.g., Left Chest)"
+                            className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm"
+                          />
+                          <button
+                            type="button"
+                            onClick={addNewPlacement}
+                            disabled={!newPlacementCode || !newPlacementName}
+                            className="px-3 py-2 bg-gray-900 text-white rounded-lg text-sm disabled:opacity-50"
+                          >
+                            <Check className="h-4 w-4" />
+                          </button>
+                        </div>
                       )}
                     </div>
 
+                    {/* Finish Types */}
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Color Options
+                        Allowed Finish Types
                       </label>
-                      <div className="flex flex-wrap gap-2">
-                        {colorChoices.map((c) => (
-                          <label
-                            key={c.id}
-                            className={`inline-flex items-center gap-2 px-3 py-1.5 border rounded-lg cursor-pointer text-sm ${
-                              insigniaColorOptions.includes(c.keyCode)
-                                ? "bg-gray-900 text-white border-gray-900"
-                                : "bg-white text-gray-700 border-gray-200 hover:border-gray-300"
-                            }`}
+                      <div className="flex flex-wrap gap-2 mb-2">
+                        {allowedFinishTypes.map((code) => {
+                          const finish = finishTypes.find((f) => f.keyCode === code);
+                          return (
+                            <span
+                              key={code}
+                              className="inline-flex items-center gap-1 px-3 py-1.5 bg-gray-900 text-white rounded-lg text-sm"
+                            >
+                              {finish?.stringValue || code}
+                              <button
+                                type="button"
+                                onClick={() => setAllowedFinishTypes(allowedFinishTypes.filter((f) => f !== code))}
+                                className="hover:text-red-300"
+                              >
+                                <X className="h-3 w-3" />
+                              </button>
+                            </span>
+                          );
+                        })}
+                        {!showNewFinish && (
+                          <button
+                            type="button"
+                            onClick={() => setShowNewFinish(true)}
+                            className="inline-flex items-center gap-1 px-3 py-1.5 border border-dashed border-gray-300 text-gray-500 rounded-lg text-sm hover:border-gray-400"
                           >
-                            <input
-                              type="checkbox"
-                              checked={insigniaColorOptions.includes(c.keyCode)}
-                              onChange={(e) => {
-                                if (e.target.checked) {
-                                  setInsigniaColorOptions([...insigniaColorOptions, c.keyCode]);
-                                } else {
-                                  setInsigniaColorOptions(insigniaColorOptions.filter((x) => x !== c.keyCode));
-                                }
-                              }}
-                              className="hidden"
-                            />
-                            {c.stringValue}
-                          </label>
-                        ))}
+                            <Plus className="h-3 w-3" />
+                            Add
+                          </button>
+                        )}
                       </div>
-                      {colorChoices.length === 0 && (
-                        <p className="text-xs text-gray-400">No color choices defined. Add them in Options.</p>
+                      
+                      {showNewFinish && (
+                        <div className="flex gap-2 p-3 bg-gray-50 rounded-lg">
+                          <select
+                            className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm"
+                            onChange={(e) => {
+                              if (e.target.value === "__new__") {
+                                // Keep form open for new creation
+                              } else if (e.target.value) {
+                                setAllowedFinishTypes([...allowedFinishTypes, e.target.value]);
+                                setShowNewFinish(false);
+                              }
+                            }}
+                            defaultValue=""
+                          >
+                            <option value="" disabled>Select existing...</option>
+                            {finishTypes
+                              .filter((f) => !allowedFinishTypes.includes(f.keyCode))
+                              .map((f) => (
+                                <option key={f.id} value={f.keyCode}>{f.stringValue}</option>
+                              ))}
+                            <option value="__new__">+ Create new finish type</option>
+                          </select>
+                          <button
+                            type="button"
+                            onClick={() => setShowNewFinish(false)}
+                            className="px-3 py-2 text-gray-500 hover:text-gray-700"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        </div>
+                      )}
+                      
+                      {showNewFinish && (
+                        <div className="flex gap-2 mt-2">
+                          <input
+                            type="text"
+                            value={newFinishCode}
+                            onChange={(e) => setNewFinishCode(e.target.value.toUpperCase())}
+                            placeholder="Code (e.g., EMB)"
+                            className="w-24 px-3 py-2 border border-gray-200 rounded-lg text-sm"
+                          />
+                          <input
+                            type="text"
+                            value={newFinishName}
+                            onChange={(e) => setNewFinishName(e.target.value)}
+                            placeholder="Name (e.g., Embroidery)"
+                            className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm"
+                          />
+                          <button
+                            type="button"
+                            onClick={addNewFinishType}
+                            disabled={!newFinishCode || !newFinishName}
+                            className="px-3 py-2 bg-gray-900 text-white rounded-lg text-sm disabled:opacity-50"
+                          >
+                            <Check className="h-4 w-4" />
+                          </button>
+                        </div>
                       )}
                     </div>
 
+                    {/* Finish + Placement Rules */}
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         Finish + Placement Rules
                       </label>
                       <p className="text-xs text-gray-500 mb-2">
-                        Define which finish types are allowed at which placements
+                        Optional: Restrict which finish types can be used at which placements
                       </p>
                       
                       {finishPlacementRules.length > 0 && (
                         <div className="space-y-2 mb-3">
-                          {finishPlacementRules.map((rule, index) => (
-                            <div key={index} className="flex items-center gap-2 p-2 bg-gray-50 rounded">
-                              <span className="text-sm">{rule.finish}</span>
-                              <span className="text-gray-400">→</span>
-                              <span className="text-sm">{rule.placement}</span>
-                              <button
-                                type="button"
-                                onClick={() => setFinishPlacementRules(finishPlacementRules.filter((_, i) => i !== index))}
-                                className="ml-auto p-1 text-gray-400 hover:text-red-500"
-                              >
-                                <X className="h-3 w-3" />
-                              </button>
-                            </div>
-                          ))}
+                          {finishPlacementRules.map((rule, index) => {
+                            const finish = finishTypes.find((f) => f.keyCode === rule.finish);
+                            const placement = placements.find((p) => p.keyCode === rule.placement);
+                            return (
+                              <div key={index} className="flex items-center gap-2 p-2 bg-gray-50 rounded">
+                                <span className="text-sm">{finish?.stringValue || rule.finish}</span>
+                                <span className="text-gray-400">→</span>
+                                <span className="text-sm">{placement?.stringValue || rule.placement}</span>
+                                <button
+                                  type="button"
+                                  onClick={() => setFinishPlacementRules(finishPlacementRules.filter((_, i) => i !== index))}
+                                  className="ml-auto p-1 text-gray-400 hover:text-red-500"
+                                >
+                                  <X className="h-3 w-3" />
+                                </button>
+                              </div>
+                            );
+                          })}
                         </div>
                       )}
 
-                      <div className="flex gap-2">
-                        <select
-                          id="new-finish"
-                          className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm"
-                          defaultValue=""
-                        >
-                          <option value="" disabled>Select finish...</option>
-                          {finishTypes.map((f) => (
-                            <option key={f.id} value={f.keyCode}>{f.stringValue}</option>
-                          ))}
-                        </select>
-                        <select
-                          id="new-placement"
-                          className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm"
-                          defaultValue=""
-                        >
-                          <option value="" disabled>Select placement...</option>
-                          {placements.map((p) => (
-                            <option key={p.id} value={p.keyCode}>{p.stringValue}</option>
-                          ))}
-                        </select>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const finishSelect = document.getElementById("new-finish") as HTMLSelectElement;
-                            const placementSelect = document.getElementById("new-placement") as HTMLSelectElement;
-                            if (finishSelect.value && placementSelect.value) {
-                              setFinishPlacementRules([
-                                ...finishPlacementRules,
-                                { finish: finishSelect.value, placement: placementSelect.value },
-                              ]);
-                              finishSelect.value = "";
-                              placementSelect.value = "";
-                            }
-                          }}
-                          className="px-3 py-2 bg-gray-100 text-gray-700 text-sm rounded-lg hover:bg-gray-200"
-                        >
-                          Add
-                        </button>
-                      </div>
+                      {(allowedFinishTypes.length > 0 && allowedPlacements.length > 0) && (
+                        <div className="flex gap-2">
+                          <select
+                            id="rule-finish"
+                            className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm"
+                            defaultValue=""
+                          >
+                            <option value="" disabled>Select finish...</option>
+                            {allowedFinishTypes.map((code) => {
+                              const finish = finishTypes.find((f) => f.keyCode === code);
+                              return <option key={code} value={code}>{finish?.stringValue || code}</option>;
+                            })}
+                          </select>
+                          <select
+                            id="rule-placement"
+                            className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm"
+                            defaultValue=""
+                          >
+                            <option value="" disabled>Select placement...</option>
+                            {allowedPlacements.map((code) => {
+                              const placement = placements.find((p) => p.keyCode === code);
+                              return <option key={code} value={code}>{placement?.stringValue || code}</option>;
+                            })}
+                          </select>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const finishSelect = document.getElementById("rule-finish") as HTMLSelectElement;
+                              const placementSelect = document.getElementById("rule-placement") as HTMLSelectElement;
+                              if (finishSelect.value && placementSelect.value) {
+                                setFinishPlacementRules([
+                                  ...finishPlacementRules,
+                                  { finish: finishSelect.value, placement: placementSelect.value },
+                                ]);
+                                finishSelect.value = "";
+                                placementSelect.value = "";
+                              }
+                            }}
+                            className="px-3 py-2 bg-gray-100 text-gray-700 text-sm rounded-lg hover:bg-gray-200"
+                          >
+                            Add
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </>
                 )}
@@ -1169,14 +1461,14 @@ export default function EditProductPage() {
             </div>
           )}
 
-          {/* Licensed Configurations - Only for base products (Type 2) */}
+          {/* Licensed Configurations */}
           {isBaseProduct && (
             <div className="bg-white border border-gray-200 rounded-lg p-6">
               <div className="flex items-center justify-between mb-4">
                 <div>
                   <h2 className="text-sm font-semibold text-gray-900">Licensed Configurations</h2>
                   <p className="text-xs text-gray-500 mt-1">
-                    Pre-configured licensed logos for this product
+                    Pre-configured licensed logos for this product (creates finished goods)
                   </p>
                 </div>
                 <button
@@ -1207,63 +1499,67 @@ export default function EditProductPage() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200">
-                      {licensedConfigs.map((config) => (
-                        <tr key={config.id}>
-                          <td className="px-4 py-2">
-                            <div className="flex items-center gap-2">
-                              {config.decoration?.imageUrl && (
-                                <img
-                                  src={config.decoration.imageUrl}
-                                  alt=""
-                                  className="h-8 w-8 object-contain rounded"
-                                />
-                              )}
-                              <div>
-                                <div className="font-medium">
-                                  {config.decoration?.teamName || config.decoration?.productName}
-                                </div>
-                                <div className="text-xs text-gray-400">
-                                  {config.decoration?.league}
+                      {licensedConfigs.map((config) => {
+                        const placementLabel = placements.find((p) => p.keyCode === config.placement)?.stringValue || config.placement;
+                        const colorLabel = colorChoices.find((c) => c.keyCode === config.colorChoice)?.stringValue || config.colorChoice;
+                        return (
+                          <tr key={config.id}>
+                            <td className="px-4 py-2">
+                              <div className="flex items-center gap-2">
+                                {config.decoration?.imageUrl && (
+                                  <img
+                                    src={config.decoration.imageUrl}
+                                    alt=""
+                                    className="h-8 w-8 object-contain rounded"
+                                  />
+                                )}
+                                <div>
+                                  <div className="font-medium">
+                                    {config.decoration?.teamName || config.decoration?.productName}
+                                  </div>
+                                  <div className="text-xs text-gray-400">
+                                    {config.decoration?.league}
+                                  </div>
                                 </div>
                               </div>
-                            </div>
-                          </td>
-                          <td className="px-4 py-2">{config.placement}</td>
-                          <td className="px-4 py-2">{config.colorChoice}</td>
-                          <td className="px-4 py-2 text-xs text-gray-500">
-                            {config.dateRangeBegin && config.dateRangeEnd
-                              ? `${config.dateRangeBegin.split("T")[0]} - ${config.dateRangeEnd.split("T")[0]}`
-                              : "—"}
-                          </td>
-                          <td className="px-4 py-2">
-                            <span
-                              className={`inline-flex px-2 py-0.5 text-xs font-medium rounded ${
-                                config.enabled
-                                  ? "bg-green-100 text-green-700"
-                                  : "bg-gray-100 text-gray-600"
-                              }`}
-                            >
-                              {config.enabled ? "Active" : "Inactive"}
-                            </span>
-                          </td>
-                          <td className="px-4 py-2 text-right">
-                            <button
-                              type="button"
-                              onClick={() => openEditConfigModal(config)}
-                              className="text-blue-600 hover:underline text-sm mr-3"
-                            >
-                              Edit
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => deleteConfig(config.id)}
-                              className="text-red-600 hover:underline text-sm"
-                            >
-                              Delete
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
+                            </td>
+                            <td className="px-4 py-2">{placementLabel}</td>
+                            <td className="px-4 py-2">{colorLabel}</td>
+                            <td className="px-4 py-2 text-xs text-gray-500">
+                              {config.dateRangeBegin && config.dateRangeEnd
+                                ? `${config.dateRangeBegin.split("T")[0]} - ${config.dateRangeEnd.split("T")[0]}`
+                                : "—"}
+                            </td>
+                            <td className="px-4 py-2">
+                              <span
+                                className={`inline-flex px-2 py-0.5 text-xs font-medium rounded ${
+                                  config.enabled
+                                    ? "bg-green-100 text-green-700"
+                                    : "bg-gray-100 text-gray-600"
+                                }`}
+                              >
+                                {config.enabled ? "Active" : "Inactive"}
+                              </span>
+                            </td>
+                            <td className="px-4 py-2 text-right">
+                              <button
+                                type="button"
+                                onClick={() => openEditConfigModal(config)}
+                                className="text-blue-600 hover:underline text-sm mr-3"
+                              >
+                                Edit
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => deleteConfig(config.id)}
+                                className="text-red-600 hover:underline text-sm"
+                              >
+                                Delete
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
@@ -1272,6 +1568,7 @@ export default function EditProductPage() {
           )}
         </div>
 
+        {/* Sidebar */}
         <div className="space-y-6">
           <div className="bg-white border border-gray-200 rounded-lg p-6">
             <h2 className="text-sm font-semibold text-gray-900 mb-4">Status</h2>
@@ -1438,8 +1735,8 @@ export default function EditProductPage() {
       {/* Licensed Configuration Modal */}
       {showLicensedModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-lg mx-4">
-            <div className="flex items-center justify-between p-4 border-b">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-xl mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between p-4 border-b sticky top-0 bg-white">
               <h3 className="font-semibold text-gray-900">
                 {editingConfig ? "Edit Configuration" : "Add Licensed Configuration"}
               </h3>
@@ -1453,66 +1750,216 @@ export default function EditProductPage() {
             </div>
 
             <div className="p-4 space-y-4">
+              {/* Logo Selection */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                   Logo <span className="text-red-500">*</span>
                 </label>
-                <select
-                  value={configForm.decorationId}
-                  onChange={(e) => setConfigForm({ ...configForm, decorationId: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
-                >
-                  <option value="">Select logo...</option>
-                  {decorations.map((d) => (
-                    <option key={d.id} value={d.id}>
-                      {d.teamName || d.productName} ({d.league})
-                    </option>
-                  ))}
-                </select>
-                {decorations.length === 0 && (
-                  <p className="text-xs text-gray-400 mt-1">
-                    No licensed logos available.{" "}
-                    <Link href={`/clients/${params.clientId}/decorations/new`} className="text-blue-600">
-                      Create one
-                    </Link>
-                  </p>
+                
+                {!configForm.createNewLogo ? (
+                  <div className="space-y-2">
+                    <select
+                      value={configForm.decorationId}
+                      onChange={(e) => {
+                        if (e.target.value === "__new__") {
+                          setConfigForm({ ...configForm, createNewLogo: true, decorationId: "" });
+                        } else {
+                          setConfigForm({ ...configForm, decorationId: e.target.value });
+                        }
+                      }}
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
+                    >
+                      <option value="">Select logo...</option>
+                      {decorations.map((d) => (
+                        <option key={d.id} value={d.id}>
+                          {d.teamName || d.productName} {d.league ? `(${d.league})` : ""}
+                        </option>
+                      ))}
+                      <option value="__new__">+ Create new logo</option>
+                    </select>
+                  </div>
+                ) : (
+                  <div className="space-y-3 p-3 bg-gray-50 rounded-lg">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-medium text-gray-700">New Logo</span>
+                      <button
+                        type="button"
+                        onClick={() => setConfigForm({ ...configForm, createNewLogo: false })}
+                        className="text-xs text-blue-600 hover:underline"
+                      >
+                        Select existing instead
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">Name *</label>
+                        <input
+                          type="text"
+                          value={configForm.newLogoName}
+                          onChange={(e) => setConfigForm({ ...configForm, newLogoName: e.target.value })}
+                          placeholder="Alabama Crimson Tide"
+                          className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">Product # *</label>
+                        <input
+                          type="text"
+                          value={configForm.newLogoNumber}
+                          onChange={(e) => setConfigForm({ ...configForm, newLogoNumber: e.target.value.toUpperCase() })}
+                          placeholder="CC-NCAA-ALA-001"
+                          className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">League</label>
+                        <input
+                          type="text"
+                          value={configForm.newLogoLeague}
+                          onChange={(e) => setConfigForm({ ...configForm, newLogoLeague: e.target.value.toUpperCase() })}
+                          placeholder="NCAA"
+                          className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">Team Code</label>
+                        <input
+                          type="text"
+                          value={configForm.newLogoTeamCode}
+                          onChange={(e) => setConfigForm({ ...configForm, newLogoTeamCode: e.target.value.toUpperCase() })}
+                          placeholder="ALA"
+                          className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">Team Name</label>
+                        <input
+                          type="text"
+                          value={configForm.newLogoTeamName}
+                          onChange={(e) => setConfigForm({ ...configForm, newLogoTeamName: e.target.value })}
+                          placeholder="Alabama"
+                          className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">Logo Price</label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          value={configForm.newLogoPrice}
+                          onChange={(e) => setConfigForm({ ...configForm, newLogoPrice: e.target.value })}
+                          placeholder="12.00"
+                          className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
+                        />
+                      </div>
+                    </div>
+                  </div>
                 )}
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Placement <span className="text-red-500">*</span>
-                  </label>
+              {/* Placement Selection */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Placement <span className="text-red-500">*</span>
+                </label>
+                
+                {!configForm.createNewPlacement ? (
                   <select
                     value={configForm.placement}
-                    onChange={(e) => setConfigForm({ ...configForm, placement: e.target.value })}
+                    onChange={(e) => {
+                      if (e.target.value === "__new__") {
+                        setConfigForm({ ...configForm, createNewPlacement: true, placement: "" });
+                      } else {
+                        setConfigForm({ ...configForm, placement: e.target.value });
+                      }
+                    }}
                     className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
                   >
-                    <option value="">Select...</option>
+                    <option value="">Select placement...</option>
                     {placements.map((p) => (
                       <option key={p.id} value={p.keyCode}>{p.stringValue}</option>
                     ))}
+                    <option value="__new__">+ Create new placement</option>
                   </select>
-                </div>
+                ) : (
+                  <div className="flex gap-2 p-3 bg-gray-50 rounded-lg">
+                    <input
+                      type="text"
+                      value={configForm.newPlacementCode}
+                      onChange={(e) => setConfigForm({ ...configForm, newPlacementCode: e.target.value.toUpperCase() })}
+                      placeholder="Code (LC)"
+                      className="w-24 px-3 py-2 border border-gray-200 rounded-lg text-sm"
+                    />
+                    <input
+                      type="text"
+                      value={configForm.newPlacementName}
+                      onChange={(e) => setConfigForm({ ...configForm, newPlacementName: e.target.value })}
+                      placeholder="Name (Left Chest)"
+                      className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setConfigForm({ ...configForm, createNewPlacement: false })}
+                      className="text-xs text-blue-600 hover:underline px-2"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                )}
+              </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Color Choice <span className="text-red-500">*</span>
-                  </label>
+              {/* Color Choice Selection */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Color Choice <span className="text-red-500">*</span>
+                </label>
+                
+                {!configForm.createNewColorChoice ? (
                   <select
                     value={configForm.colorChoice}
-                    onChange={(e) => setConfigForm({ ...configForm, colorChoice: e.target.value })}
+                    onChange={(e) => {
+                      if (e.target.value === "__new__") {
+                        setConfigForm({ ...configForm, createNewColorChoice: true, colorChoice: "" });
+                      } else {
+                        setConfigForm({ ...configForm, colorChoice: e.target.value });
+                      }
+                    }}
                     className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
                   >
-                    <option value="">Select...</option>
+                    <option value="">Select color choice...</option>
                     {colorChoices.map((c) => (
                       <option key={c.id} value={c.keyCode}>{c.stringValue}</option>
                     ))}
+                    <option value="__new__">+ Create new color choice</option>
                   </select>
-                </div>
+                ) : (
+                  <div className="flex gap-2 p-3 bg-gray-50 rounded-lg">
+                    <input
+                      type="text"
+                      value={configForm.newColorChoiceCode}
+                      onChange={(e) => setConfigForm({ ...configForm, newColorChoiceCode: e.target.value.toUpperCase() })}
+                      placeholder="Code (RED)"
+                      className="w-24 px-3 py-2 border border-gray-200 rounded-lg text-sm"
+                    />
+                    <input
+                      type="text"
+                      value={configForm.newColorChoiceName}
+                      onChange={(e) => setConfigForm({ ...configForm, newColorChoiceName: e.target.value })}
+                      placeholder="Name (Team Red)"
+                      className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setConfigForm({ ...configForm, createNewColorChoice: false })}
+                      className="text-xs text-blue-600 hover:underline px-2"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                )}
               </div>
 
+              {/* Finished Good Details */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Finished Good Name
@@ -1521,12 +1968,9 @@ export default function EditProductPage() {
                   type="text"
                   value={configForm.finishedGoodName}
                   onChange={(e) => setConfigForm({ ...configForm, finishedGoodName: e.target.value })}
-                  placeholder="e.g., Seaside Polo - Alabama"
+                  placeholder="e.g., Seaside Polo - Alabama (auto-generated if blank)"
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
                 />
-                <p className="text-xs text-gray-400 mt-1">
-                  Display name for the finished good. Leave blank to auto-generate.
-                </p>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -1596,7 +2040,7 @@ export default function EditProductPage() {
               </label>
             </div>
 
-            <div className="flex justify-end gap-3 p-4 border-t">
+            <div className="flex justify-end gap-3 p-4 border-t sticky bottom-0 bg-white">
               <button
                 type="button"
                 onClick={() => setShowLicensedModal(false)}
@@ -1607,8 +2051,10 @@ export default function EditProductPage() {
               <button
                 type="button"
                 onClick={saveConfig}
-                className="px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-800"
+                disabled={savingConfig}
+                className="px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-800 disabled:opacity-50 flex items-center gap-2"
               >
+                {savingConfig && <Loader2 className="h-4 w-4 animate-spin" />}
                 {editingConfig ? "Save Changes" : "Add Configuration"}
               </button>
             </div>
