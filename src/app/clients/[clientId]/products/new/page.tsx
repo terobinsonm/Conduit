@@ -5,7 +5,6 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   ArrowLeft,
-  Plus,
   X,
   Loader2,
   Package,
@@ -177,7 +176,7 @@ export default function NewProductPage() {
     );
   }
 
-  function updateInventory(index: number, field: keyof InventoryRecord, value: any) {
+  function updateInventory(index: number, field: keyof InventoryRecord, value: unknown) {
     setInventory((prev) => {
       const updated = [...prev];
       updated[index] = { ...updated[index], [field]: value };
@@ -191,7 +190,7 @@ export default function NewProductPage() {
   const categories = options.filter((o) => o.elementType === "ProductCategory");
   const divisions = options.filter((o) => o.elementType === "Division");
 
-async function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     
     const errors: string[] = [];
@@ -215,7 +214,6 @@ async function handleSubmit(e: React.FormEvent) {
       errors.push("Category is required");
     }
     
-    // Check for size options
     const sizeOptions = productOptions.filter((o) => !o.isProductLevel);
     if (sizeOptions.length === 0 || sizeOptions.every((o) => o.values.length === 0)) {
       errors.push("At least one size option with values is required (e.g., Size: S, M, L)");
@@ -227,7 +225,6 @@ async function handleSubmit(e: React.FormEvent) {
     }
 
     setSaving(true);
-    // ... rest of the function
 
     try {
       const res = await fetch(`/api/clients/${params.clientId}/products`, {
@@ -269,7 +266,7 @@ async function handleSubmit(e: React.FormEvent) {
         const error = await res.json();
         alert(error.error || "Failed to create product");
       }
-    } catch (error) {
+    } catch {
       alert("Failed to create product");
     } finally {
       setSaving(false);
@@ -331,7 +328,6 @@ async function handleSubmit(e: React.FormEvent) {
                   onChange={(e) => setProductNumber(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-gray-900 focus:border-gray-900"
                   placeholder="e.g., CNC-P1001"
-                  required
                 />
                 <p className="text-xs text-gray-500 mt-1">Used as image filename and unique identifier</p>
               </div>
@@ -372,7 +368,7 @@ async function handleSubmit(e: React.FormEvent) {
             <h2 className="text-sm font-semibold text-gray-900 mb-4">Media</h2>
             <div className="border-2 border-dashed border-gray-200 rounded-lg p-8 text-center">
               <Package className="h-10 w-10 mx-auto text-gray-300 mb-3" />
-              <p className="text-sm text-gray-500 mb-1">Image upload coming soon</p>
+              <p className="text-sm text-gray-500 mb-1">Image upload available after saving</p>
               <p className="text-xs text-gray-400">Will be saved as {productNumber || "PRODUCT_NUMBER"}.jpg</p>
             </div>
           </div>
@@ -393,7 +389,6 @@ async function handleSubmit(e: React.FormEvent) {
                     onChange={(e) => setWholesalePrice(e.target.value)}
                     className="w-full pl-7 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-gray-900 focus:border-gray-900"
                     placeholder="0.00"
-                    required
                   />
                 </div>
               </div>
@@ -443,10 +438,20 @@ async function handleSubmit(e: React.FormEvent) {
           </div>
 
           <div className="bg-white border border-gray-200 rounded-lg p-6">
-            <h2 className="text-sm font-semibold text-gray-900 mb-4">Options</h2>
+            <h2 className="text-sm font-semibold text-gray-900 mb-2">
+              Sizes / Options <span className="text-red-500">*</span>
+            </h2>
             <p className="text-sm text-gray-500 mb-4">
-              Define product options like size, color, material, etc. Options marked as "Creates separate products" will generate individual products in RepSpark for each value.
+              Add at least one size option (e.g., Size: S, M, L, XL). This determines the available variants for ordering.
             </p>
+
+            {productOptions.length === 0 && (
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
+                <p className="text-sm text-yellow-800">
+                  You must add at least one size option before saving.
+                </p>
+              </div>
+            )}
 
             {productOptions.length > 0 && (
               <div className="space-y-4 mb-4">
@@ -513,7 +518,7 @@ async function handleSubmit(e: React.FormEvent) {
                 type="text"
                 value={newOptionName}
                 onChange={(e) => setNewOptionName(e.target.value)}
-                placeholder="Option name (e.g., Size, Color, Material)"
+                placeholder="Option name (e.g., Size)"
                 className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-gray-900"
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
@@ -639,7 +644,8 @@ async function handleSubmit(e: React.FormEvent) {
           </div>
 
           <div className="bg-white border border-gray-200 rounded-lg p-6">
-            <h2 className="text-sm font-semibold text-gray-900 mb-4">Classification</h2>
+            <h2 className="text-sm font-semibold text-gray-900 mb-2">Classification</h2>
+            <p className="text-xs text-gray-500 mb-4">Required for RepSpark sync</p>
             <div className="space-y-4">
               <ClassificationCombobox
                 label="Season"
@@ -654,6 +660,7 @@ async function handleSubmit(e: React.FormEvent) {
                 }}
                 placeholder="Select or create season..."
                 multiple={true}
+                required={true}
               />
               <ClassificationCombobox
                 label="Color"
@@ -667,6 +674,7 @@ async function handleSubmit(e: React.FormEvent) {
                   ]);
                 }}
                 placeholder="Select or create color..."
+                required={true}
               />
               <ClassificationCombobox
                 label="Gender"
@@ -680,6 +688,7 @@ async function handleSubmit(e: React.FormEvent) {
                   ]);
                 }}
                 placeholder="Select or create gender..."
+                required={true}
               />
               <ClassificationCombobox
                 label="Category"
@@ -693,6 +702,7 @@ async function handleSubmit(e: React.FormEvent) {
                   ]);
                 }}
                 placeholder="Select or create category..."
+                required={true}
               />
               <ClassificationCombobox
                 label="Division"
