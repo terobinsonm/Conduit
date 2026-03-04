@@ -191,18 +191,43 @@ export default function NewProductPage() {
   const categories = options.filter((o) => o.elementType === "ProductCategory");
   const divisions = options.filter((o) => o.elementType === "Division");
 
-  async function handleSubmit(e: React.FormEvent) {
+async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    
+    const errors: string[] = [];
+    
     if (!productNumber.trim()) {
-      alert("Product number is required");
-      return;
+      errors.push("Product number is required");
     }
     if (!wholesalePrice) {
-      alert("Wholesale price is required");
+      errors.push("Wholesale price is required");
+    }
+    if (!seasonCode) {
+      errors.push("Season is required");
+    }
+    if (!colorCode) {
+      errors.push("Color is required");
+    }
+    if (!genderCode) {
+      errors.push("Gender is required");
+    }
+    if (!categoryCode) {
+      errors.push("Category is required");
+    }
+    
+    // Check for size options
+    const sizeOptions = productOptions.filter((o) => !o.isProductLevel);
+    if (sizeOptions.length === 0 || sizeOptions.every((o) => o.values.length === 0)) {
+      errors.push("At least one size option with values is required (e.g., Size: S, M, L)");
+    }
+    
+    if (errors.length > 0) {
+      alert(errors.join("\n"));
       return;
     }
 
     setSaving(true);
+    // ... rest of the function
 
     try {
       const res = await fetch(`/api/clients/${params.clientId}/products`, {
