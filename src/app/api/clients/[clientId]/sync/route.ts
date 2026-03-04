@@ -25,6 +25,7 @@ export async function POST(
     }
 
     let result;
+    let entityType = entity;
 
     switch (entity) {
       case "options": {
@@ -64,22 +65,19 @@ export async function POST(
         break;
       }
 
-case "customers": {
-  // Fetch ALL customers (both Bill-To and Ship-To) for sync
-  const customers = await prisma.customer.findMany({
-    where: { clientId: params.clientId },
-  });
-  const payload = transformCustomers(customers);
-  result = await syncToRepSpark(client, environment, "customer", payload);
-  break;
-}
+      case "customers": {
+        const customers = await prisma.customer.findMany({
+          where: { clientId: params.clientId },
+        });
+        const payload = transformCustomers(customers);
+        result = await syncToRepSpark(client, environment, "customer", payload);
+        break;
+      }
 
       case "images": {
-        // Handle images sync separately - calls the images sync endpoint
         const baseUrl = process.env.VERCEL_URL
           ? `https://${process.env.VERCEL_URL}`
           : request.nextUrl.origin;
-
         const imagesResponse = await fetch(
           `${baseUrl}/api/clients/${params.clientId}/sync/images`,
           {
@@ -97,6 +95,20 @@ case "customers": {
           { status: 400 }
         );
     }
+
+    // Log the sync result
+    await prisma.syncLog.create({
+      data: {
+        clientId: params.clientId,
+        entityType,
+        environment,
+        syncMode: "Full",
+        recordCount: result.recordCount || 0,
+        success: result.success,
+        error: result.error || null,
+        details: result.details ? JSON.stringify(result.details) : null,
+      },
+    });
 
     return NextResponse.json(result);
   } catch (error) {
