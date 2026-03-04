@@ -73,7 +73,7 @@ export async function POST(request: NextRequest, { params }: Params) {
     const customer = await prisma.$transaction(async (tx) => {
       const billTo = await tx.customer.create({
         data: {
-          clientId: params.clientId,
+          client: { connect: { id: params.clientId } },
           customerCode: body.customerCode,
           name: body.name,
           isBillTo: true,
@@ -107,8 +107,8 @@ export async function POST(request: NextRequest, { params }: Params) {
         for (const store of stores) {
           await tx.customer.create({
             data: {
-              clientId: params.clientId,
-              parentId: billTo.id,
+              client: { connect: { id: params.clientId } },
+              parent: { connect: { id: billTo.id } },
               customerCode: body.customerCode,
               name: store.name,
               isBillTo: false,
