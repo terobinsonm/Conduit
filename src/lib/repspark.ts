@@ -57,7 +57,7 @@ export function transformOptions(options: Option[]): Record<string, unknown>[] {
     ElementType: opt.elementType,
     KeyCode: opt.keyCode,
     StringValue: opt.stringValue,
-    Description: opt.stringValue,  // Add this line
+    Description: opt.stringValue,
     ...(opt.stringValue2 && { StringValue2: opt.stringValue2 }),
     ...(opt.numericValue !== null && { NumericValue: opt.numericValue }),
     ...(opt.booleanValue !== null && { BooleanValue: opt.booleanValue }),
@@ -106,7 +106,6 @@ export function transformProducts(products: Product[]): Record<string, unknown>[
       BrandCode: p.brandCode,
     };
 
-    // Add optional fields only if they have values
     if (p.productName) record.ProductName = p.productName;
     if (p.longDescription) record.LongDescription = p.longDescription;
     if (p.shortDescription) record.ShortDescription = p.shortDescription;
@@ -115,7 +114,6 @@ export function transformProducts(products: Product[]): Record<string, unknown>[
     if (p.genderCode) record.GenderCode = p.genderCode;
     if (p.seasonCode) record.SeasonCode = p.seasonCode;
     if (p.divisionCode) record.DivisionCode = p.divisionCode;
-// SizeScaleCode handled separately
     if (p.catalogCode) record.CatalogCode = p.catalogCode;
     if (p.dimensionCode) record.DimensionCode = p.dimensionCode;
     if (p.marketingSeasonCode) record.MarketingSeasonCode = p.marketingSeasonCode;
@@ -218,6 +216,13 @@ export async function syncToRepSpark(
   const transactionToken = generateTransactionToken();
 
   try {
+    console.log(`RepSpark ${entityType} sync request:`, {
+      url: `${config.baseUrl}/api/${entityType}`,
+      syncMode,
+      payloadCount: payload.length,
+      payload: payload.slice(0, 2),
+    });
+
     const response = await fetch(`${config.baseUrl}/api/${entityType}`, {
       method: "POST",
       headers: {
@@ -238,8 +243,13 @@ export async function syncToRepSpark(
       responseData = responseText;
     }
 
+    console.log(`RepSpark ${entityType} sync response:`, {
+      status: response.status,
+      ok: response.ok,
+      response: responseData,
+    });
+
     if (response.ok) {
-      console.log(`RepSpark ${entityType} response:`, responseData);
       return {
         success: true,
         recordCount: payload.length,
@@ -256,6 +266,7 @@ export async function syncToRepSpark(
       };
     }
   } catch (error) {
+    console.error(`RepSpark ${entityType} sync error:`, error);
     return {
       success: false,
       recordCount: payload.length,
@@ -278,7 +289,6 @@ export async function testConnection(
   }
 
   try {
-    // Send empty options sync to test connection
     const response = await fetch(`${config.baseUrl}/api/option`, {
       method: "POST",
       headers: {
