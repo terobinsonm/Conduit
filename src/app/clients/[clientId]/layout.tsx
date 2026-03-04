@@ -54,7 +54,7 @@ export default async function ClientLayout({ children, params }: ClientLayoutPro
     { name: "Customers", href: `/clients/${client.id}/customers`, icon: Users },
     { name: "Sync", href: `/clients/${client.id}/sync`, icon: RefreshCw },
     { name: "Settings", href: `/clients/${client.id}/settings`, icon: Settings },
-    { name: "Sync Logs", href: `/clients/${clientId}/sync-logs`, icon: History }
+{ name: "Sync Logs", href: `/clients/${client.id}/sync-logs`, icon: History }
   ];
 
   return (
