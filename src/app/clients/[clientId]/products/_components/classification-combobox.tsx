@@ -11,12 +11,13 @@ interface Option {
 
 interface ClassificationComboboxProps {
   label: string;
-  value: string; // comma-separated values
+  value: string;
   options: Option[];
   onChange: (value: string) => void;
   onCreateNew: (keyCode: string, stringValue: string) => void;
   placeholder?: string;
   multiple?: boolean;
+  required?: boolean;
 }
 
 export function ClassificationCombobox({
@@ -27,6 +28,7 @@ export function ClassificationCombobox({
   onCreateNew,
   placeholder = "Select or type to create...",
   multiple = false,
+  required = false,
 }: ClassificationComboboxProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -34,10 +36,8 @@ export function ClassificationCombobox({
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Parse comma-separated values into array
   const selectedValues = value ? value.split(",").filter(Boolean) : [];
 
-  // Get display name for a keyCode
   function getDisplayName(keyCode: string): string {
     const pending = pendingCreates.get(keyCode);
     if (pending) return pending;
@@ -124,13 +124,14 @@ export function ClassificationCombobox({
     setIsOpen(false);
   }
 
-  // Single select display
   if (!multiple) {
     const displayValue = value ? getDisplayName(value) : "";
     
     return (
       <div ref={containerRef} className="relative">
-        <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          {label} {required && <span className="text-red-500">*</span>}
+        </label>
         <div
           className={`flex items-center border rounded-lg bg-white cursor-pointer ${
             isOpen ? "ring-1 ring-gray-900 border-gray-900" : "border-gray-200"
@@ -219,12 +220,12 @@ export function ClassificationCombobox({
     );
   }
 
-  // Multi-select display
   return (
     <div ref={containerRef} className="relative">
-      <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
+      <label className="block text-sm font-medium text-gray-700 mb-1">
+        {label} {required && <span className="text-red-500">*</span>}
+      </label>
       
-      {/* Selected tags */}
       {selectedValues.length > 0 && (
         <div className="flex flex-wrap gap-1 mb-2">
           {selectedValues.map((keyCode) => (
@@ -245,7 +246,6 @@ export function ClassificationCombobox({
         </div>
       )}
 
-      {/* Input */}
       <div
         className={`flex items-center border rounded-lg bg-white cursor-pointer ${
           isOpen ? "ring-1 ring-gray-900 border-gray-900" : "border-gray-200"
