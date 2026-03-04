@@ -3,7 +3,19 @@
 import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft, Loader2, Plus, Trash2, Store } from "lucide-react";
+
+interface StoreInput {
+  id: string;
+  storeCode: string;
+  name: string;
+  address1: string;
+  city: string;
+  state: string;
+  zip: string;
+  phoneNumber: string;
+  enabled: boolean;
+}
 
 export default function NewCustomerPage() {
   const params = useParams();
@@ -23,7 +35,7 @@ export default function NewCustomerPage() {
   const [phoneNumber, setPhoneNumber] = useState("");
 
   const [salesPersonCode, setSalesPersonCode] = useState("");
-  const [brandCode, setBrandCode] = useState("CC");
+  const [brandCode, setBrandCode] = useState("");
   const [divisionCode, setDivisionCode] = useState("");
   const [termsCode, setTermsCode] = useState("");
 
@@ -35,12 +47,49 @@ export default function NewCustomerPage() {
   const [typeCode, setTypeCode] = useState("");
   const [creditStatusCode, setCreditStatusCode] = useState("");
 
+  const [stores, setStores] = useState<StoreInput[]>([]);
+
+  function addStore() {
+    setStores([
+      ...stores,
+      {
+        id: crypto.randomUUID(),
+        storeCode: "",
+        name: "",
+        address1: "",
+        city: "",
+        state: "",
+        zip: "",
+        phoneNumber: "",
+        enabled: true,
+      },
+    ]);
+  }
+
+  function updateStore(id: string, field: keyof StoreInput, value: string | boolean) {
+    setStores(stores.map((s) => (s.id === id ? { ...s, [field]: value } : s)));
+  }
+
+  function removeStore(id: string) {
+    setStores(stores.filter((s) => s.id !== id));
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
 
     const errors: string[] = [];
     if (!customerCode.trim()) errors.push("Customer code is required");
     if (!name.trim()) errors.push("Name is required");
+
+    for (const store of stores) {
+      if (!store.storeCode.trim()) errors.push("All stores must have a store code");
+      if (!store.name.trim()) errors.push("All stores must have a name");
+    }
+
+    const storeCodes = stores.map((s) => s.storeCode.trim().toUpperCase());
+    if (new Set(storeCodes).size !== storeCodes.length) {
+      errors.push("Store codes must be unique");
+    }
 
     if (errors.length > 0) {
       alert(errors.join("\n"));
@@ -65,7 +114,7 @@ export default function NewCustomerPage() {
           country,
           phoneNumber: phoneNumber.trim() || null,
           salesPersonCode: salesPersonCode.trim() || null,
-          brandCode: brandCode.trim() || "CC",
+          brandCode: brandCode.trim() || null,
           divisionCode: divisionCode.trim() || null,
           termsCode: termsCode.trim() || null,
           discountPercentage: discountPercentage || 0,
@@ -75,6 +124,16 @@ export default function NewCustomerPage() {
           channelCode: channelCode.trim() || null,
           typeCode: typeCode.trim() || null,
           creditStatusCode: creditStatusCode.trim() || null,
+          stores: stores.map((s) => ({
+            storeCode: s.storeCode.trim().toUpperCase(),
+            name: s.name.trim(),
+            address1: s.address1.trim() || null,
+            city: s.city.trim() || null,
+            state: s.state.trim() || null,
+            zip: s.zip.trim() || null,
+            phoneNumber: s.phoneNumber.trim() || null,
+            enabled: s.enabled,
+          })),
         }),
       });
 
@@ -104,7 +163,7 @@ export default function NewCustomerPage() {
           </Link>
           <div>
             <h1 className="text-xl font-semibold text-gray-900">Add customer</h1>
-            <p className="text-sm text-gray-500">Create a new bill-to account</p>
+            <p className="text-sm text-gray-500">Create a new customer account</p>
           </div>
         </div>
         <div className="flex items-center gap-3">
@@ -273,6 +332,125 @@ export default function NewCustomerPage() {
               </div>
             </div>
           </div>
+
+          <div className="bg-white border border-gray-200 rounded-lg p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="text-sm font-semibold text-gray-900">Ship-to locations</h2>
+                <p className="text-xs text-gray-500 mt-1">
+                  Optional. If no stores are added, the billing address will also be used for shipping.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={addStore}
+                className="inline-flex items-center gap-2 px-3 py-1.5 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200"
+              >
+                <Plus className="h-4 w-4" />
+                Add store
+              </button>
+            </div>
+
+            {stores.length === 0 ? (
+              <div className="text-center py-8 border-2 border-dashed border-gray-200 rounded-lg">
+                <Store className="h-8 w-8 mx-auto text-gray-300 mb-2" />
+                <p className="text-sm text-gray-500">No separate shipping locations</p>
+                <p className="text-xs text-gray-400">Billing address will be used for shipping</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {stores.map((store, index) => (
+                  <div key={store.id} className="border border-gray-200 rounded-lg p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="text-sm font-medium text-gray-700">Store {index + 1}</span>
+                      <button
+                        type="button"
+                        onClick={() => removeStore(store.id)}
+                        className="p-1 text-gray-400 hover:text-red-500"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">
+                          Store code <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={store.storeCode}
+                          onChange={(e) => updateStore(store.id, "storeCode", e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-gray-900 uppercase"
+                          placeholder="e.g., STORE01"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">
+                          Store name <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={store.name}
+                          onChange={(e) => updateStore(store.id, "name", e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-gray-900"
+                          placeholder="e.g., Downtown Location"
+                        />
+                      </div>
+                      <div className="col-span-2">
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Address</label>
+                        <input
+                          type="text"
+                          value={store.address1}
+                          onChange={(e) => updateStore(store.id, "address1", e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-gray-900"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">City</label>
+                        <input
+                          type="text"
+                          value={store.city}
+                          onChange={(e) => updateStore(store.id, "city", e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-gray-900"
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">State</label>
+                          <input
+                            type="text"
+                            value={store.state}
+                            onChange={(e) => updateStore(store.id, "state", e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-gray-900"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">ZIP</label>
+                          <input
+                            type="text"
+                            value={store.zip}
+                            onChange={(e) => updateStore(store.id, "zip", e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-gray-900"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                    <div className="mt-3 pt-3 border-t border-gray-100">
+                      <label className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={store.enabled}
+                          onChange={(e) => updateStore(store.id, "enabled", e.target.checked)}
+                          className="rounded border-gray-300 text-gray-900 focus:ring-gray-900"
+                        />
+                        <span className="text-xs text-gray-600">Active (included in sync)</span>
+                      </label>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="space-y-6">
@@ -285,7 +463,12 @@ export default function NewCustomerPage() {
                 onChange={(e) => setEnabled(e.target.checked)}
                 className="rounded border-gray-300 text-gray-900 focus:ring-gray-900"
               />
-              <span className="text-sm">Active</span>
+              <div>
+                <span className="text-sm">Active</span>
+                <p className="text-xs text-gray-500">
+                  {enabled ? "Included in sync to RepSpark" : "Excluded from sync"}
+                </p>
+              </div>
             </label>
           </div>
 
