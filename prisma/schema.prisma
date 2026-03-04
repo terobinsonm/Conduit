@@ -45,6 +45,7 @@ model Client {
   syncLogs            SyncLog[]
   images              ProductImage[]
   syncSchedule        SyncSchedule?
+  licensedConfigurations LicensedConfiguration[]
   
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
@@ -178,8 +179,27 @@ model Product {
   
   imageUrl             String?
   
+  // Decoration metadata (for Type 3 Insignia / Type 4 Licensed logos)
+  league               String?
+  teamCode             String?
+  teamName             String?
+  teamDescription      String?
+  
+  // Insignia settings (for Type 2 base products)
+  insigniaEnabled      Boolean    @default(false)
+  allowedPlacements    String?    // JSON array of placement codes
+  finishPlacementRules String?    // JSON array of {finish, placement} pairs
+  insigniaColorOptions String?    // JSON array of color option codes
+  
+  // Customer restrictions (for Type 3/4 logos)
+  customerRestrictions String?    // JSON array of customer codes, null = all
+  
   inventory            Inventory[]
   images               ProductImage[]
+  
+  // Licensed configuration relations
+  licensedConfigs      LicensedConfiguration[] @relation("ProductLicensedConfigs")
+  decorationConfigs    LicensedConfiguration[] @relation("DecorationLicensedConfigs")
   
   createdAt            DateTime   @default(now())
   updatedAt            DateTime   @updatedAt
@@ -188,6 +208,7 @@ model Product {
   @@index([clientId])
   @@index([clientId, seasonCode])
   @@index([clientId, categoryCode])
+  @@index([clientId, productType])
   @@index([sizeScaleId])
   @@index([parentProductId])
 }
@@ -301,6 +322,50 @@ model Customer {
   @@index([clientId, salesPersonCode])
   @@index([parentId])
 }
+
+// ============================================================================
+// LICENSED CONFIGURATIONS (ProductGroups)
+// ============================================================================
+
+model LicensedConfiguration {
+  id              String   @id @default(cuid())
+  clientId        String
+  client          Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  
+  // Base product (Type 2)
+  productId       String
+  product         Product  @relation("ProductLicensedConfigs", fields: [productId], references: [id], onDelete: Cascade)
+  
+  // Decoration/Logo product (Type 4)
+  decorationId    String
+  decoration      Product  @relation("DecorationLicensedConfigs", fields: [decorationId], references: [id], onDelete: Cascade)
+  
+  placement       String
+  colorChoice     String
+  
+  // Finished good display (from PRD)
+  finishedGoodName      String?
+  finishedGoodImageUrl  String?
+  finishedGoodShortDesc String?
+  finishedGoodLongDesc  String?
+  
+  // Pricing overrides
+  wholesalePrice  Float?
+  retailPrice     Float?
+  
+  dateRangeBegin  DateTime?
+  dateRangeEnd    DateTime?
+  enabled         Boolean  @default(true)
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@unique([clientId, productId, decorationId, placement, colorChoice])
+  @@index([clientId])
+  @@index([productId])
+  @@index([decorationId])
+}
+
 // ============================================================================
 // SYNC MANAGEMENT
 // ============================================================================
@@ -357,4 +422,3 @@ model SyncSchedule {
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
 }
-
