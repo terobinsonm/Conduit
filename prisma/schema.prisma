@@ -273,7 +273,7 @@ model Customer {
   faxNumber            String?
   
   salesPersonCode      String?
-  brandCode            String   @default("CC")
+  brandCode            String?
   divisionCode         String?
   termsCode            String?
   shippingMethodCode   String?
