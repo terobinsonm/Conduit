@@ -59,11 +59,10 @@ export async function POST(request: NextRequest, { params }: Params) {
   try {
     const body = await request.json();
     const stores: StoreInput[] = body.stores || [];
-    const clientId = params.clientId;
 
     const existing = await prisma.customer.findFirst({
       where: {
-        clientId,
+        clientId: params.clientId,
         customerCode: body.customerCode,
         isBillTo: true,
         parentId: null,
@@ -76,10 +75,10 @@ export async function POST(request: NextRequest, { params }: Params) {
       );
     }
 
-    // Create bill-to customer
+    // Create bill-to customer using relation syntax
     const billTo = await prisma.customer.create({
       data: {
-        clientId,
+        client: { connect: { id: params.clientId } },
         customerCode: body.customerCode,
         name: body.name,
         isBillTo: true,
@@ -107,12 +106,12 @@ export async function POST(request: NextRequest, { params }: Params) {
       },
     });
 
-    // Create stores
+    // Create stores using relation syntax
     for (const store of stores) {
       await prisma.customer.create({
         data: {
-          clientId,
-          parentId: billTo.id,
+          client: { connect: { id: params.clientId } },
+          parent: { connect: { id: billTo.id } },
           customerCode: body.customerCode,
           name: store.name,
           isBillTo: false,
@@ -124,18 +123,18 @@ export async function POST(request: NextRequest, { params }: Params) {
           zip: store.zip || null,
           country: body.country || "US",
           phoneNumber: store.phoneNumber || null,
-          salesPersonCode: body.salesPersonCode,
+          salesPersonCode: body.salesPersonCode || null,
           brandCode: body.brandCode || null,
-          divisionCode: body.divisionCode,
-          termsCode: body.termsCode,
+          divisionCode: body.divisionCode || null,
+          termsCode: body.termsCode || null,
           shippingMethodCode: store.shippingMethodCode || null,
           discountPercentage: parseFloat(body.discountPercentage) || 0,
-          pricePlanCode: body.pricePlanCode,
-          customerGroupCode: body.customerGroupCode,
-          classificationCode: body.classificationCode,
-          channelCode: body.channelCode,
-          typeCode: body.typeCode,
-          creditStatusCode: body.creditStatusCode,
+          pricePlanCode: body.pricePlanCode || null,
+          customerGroupCode: body.customerGroupCode || null,
+          classificationCode: body.classificationCode || null,
+          channelCode: body.channelCode || null,
+          typeCode: body.typeCode || null,
+          creditStatusCode: body.creditStatusCode || null,
         },
       });
     }
