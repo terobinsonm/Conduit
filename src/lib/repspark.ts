@@ -7,6 +7,82 @@ interface RepSparkConfig {
   clientKey: string;
   environmentKey: string;
 }
+interface DemoOrderWithRelations {
+  id: string;
+  orderNumber: string;
+  orderDate: Date;
+  entryDate: Date;
+  purchaseOrder: string | null;
+  statusCode: string;
+  shippingMethodCode: string | null;
+  shippingCarrierName: string | null;
+  trackingNumber: string | null;
+  billingCustomer: {
+    customerCode: string;
+    name: string;
+    address1: string | null;
+    address2: string | null;
+    city: string | null;
+    state: string | null;
+    zip: string | null;
+    country: string;
+    phoneNumber: string | null;
+    faxNumber: string | null;
+    dba: string | null;
+    salesPersonCode: string | null;
+    termsCode: string | null;
+    divisionCode: string | null;
+    brandCode: string | null;
+  };
+  shippingCustomer: {
+    customerCode: string;
+    storeCode: string | null;
+    name: string;
+    address1: string | null;
+    address2: string | null;
+    city: string | null;
+    state: string | null;
+    zip: string | null;
+    country: string;
+    phoneNumber: string | null;
+    faxNumber: string | null;
+    dba: string | null;
+  } | null;
+  lines: {
+    lineNumber: number;
+    productNumber: string;
+    productName: string | null;
+    colorCode: string | null;
+    colorDescription: string | null;
+    genderCode: string | null;
+    genderDescription: string | null;
+    seasonCode: string | null;
+    seasonDescription: string | null;
+    categoryCode: string | null;
+    categoryDescription: string | null;
+    sizeScaleCode: string | null;
+    divisionCode: string | null;
+    divisionDescription: string | null;
+    brandCode: string;
+    sizeCode: string;
+    orderedQuantity: number;
+    invoicedQuantity: number;
+    retailPrice: number;
+    wholesalePrice: number;
+    sellPrice: number;
+    cost: number;
+    statusCode: string;
+  }[];
+  invoice: {
+    invoiceNumber: string;
+    invoiceCreatedDate: Date;
+    invoiceSentDate: Date | null;
+    invoiceDueDate: Date;
+    invoiceAmount: number;
+    freightAmount: number;
+    taxAmount: number;
+  } | null;
+}
 
 interface LicensedConfigWithRelations {
   id: string;
@@ -294,10 +370,196 @@ export interface SyncResult {
   details?: unknown;
 }
 
+export function transformOrderReports(
+  orders: DemoOrderWithRelations[]
+): Record<string, unknown>[] {
+  return orders.map((order) => {
+    const billing = order.billingCustomer;
+    const shipping = order.shippingCustomer || billing;
+
+    const record: Record<string, unknown> = {
+      OrderNumber: order.orderNumber,
+      OrderDate: order.orderDate.toISOString().split("T")[0],
+      EntryDate: order.entryDate.toISOString().split("T")[0],
+      StatusCode: order.statusCode,
+
+      // Billing
+      BillingCustomerCode: billing.customerCode,
+      BillingCustomerName: billing.name,
+      BillingAddress1: billing.address1,
+      BillingAddress2: billing.address2,
+      BillingCity: billing.city,
+      BillingState: billing.state,
+      BillingZip: billing.zip,
+      BillingCountry: billing.country,
+      BillingTelephone: billing.phoneNumber,
+      BillingFaxNumber: billing.faxNumber,
+      BillingDBA: billing.dba,
+
+      // Shipping
+      ShippingCustomerCode: shipping.customerCode,
+      ShippingCustomerName: shipping.name,
+      ShippingAddress1: shipping.address1,
+      ShippingAddress2: shipping.address2,
+      ShippingCity: shipping.city,
+      ShippingState: shipping.state,
+      ShippingZip: shipping.zip,
+      ShippingCountry: shipping.country,
+      ShippingTelephone: shipping.phoneNumber,
+      ShippingFaxNumber: shipping.faxNumber,
+      ShippingDBA: shipping.dba,
+
+      // Order details
+      SalesPersonCode: billing.salesPersonCode,
+      TermsCode: billing.termsCode,
+      DivisionCode: billing.divisionCode,
+      BrandCode: billing.brandCode || "CC",
+
+      // Line items
+      OrderItems: order.lines.map((line) => ({
+        OrderLineNumber: String(line.lineNumber),
+        ProductNumber: line.productNumber,
+        ProductName: line.productName,
+        ColorCode: line.colorCode,
+        ColorDescription: line.colorDescription,
+        GenderCode: line.genderCode,
+        GenderDescription: line.genderDescription,
+        SeasonCode: line.seasonCode,
+        SeasonDescription: line.seasonDescription,
+        ProductCategoryCode: line.categoryCode,
+        ProductCategoryDescription: line.categoryDescription,
+        SizeScaleCode: line.sizeScaleCode,
+        DivisionCode: line.divisionCode,
+        DivisionDescription: line.divisionDescription,
+        BrandCode: line.brandCode,
+        StatusCode: line.statusCode,
+        OrderItemSizes: [
+          {
+            SizeCode: line.sizeCode,
+            OrderedQuantity: line.orderedQuantity,
+            SizeRetailPrice: line.retailPrice,
+            SizeWholesalePrice: line.wholesalePrice,
+            SizeSellPrice: line.sellPrice,
+            SizeCost: line.cost,
+            StatusCode: line.statusCode,
+          },
+        ],
+      })),
+    };
+
+    if (order.purchaseOrder) record.PurchaseOrder = order.purchaseOrder;
+    if (order.shippingMethodCode) record.ShippingMethodCode = order.shippingMethodCode;
+    if (order.shippingCustomer?.storeCode) record.StoreNumber = order.shippingCustomer.storeCode;
+
+    return record;
+  });
+}
+
+export function transformInvoiceReports(
+  orders: DemoOrderWithRelations[]
+): Record<string, unknown>[] {
+  // Only include orders that have invoices
+  const invoicedOrders = orders.filter((o) => o.invoice);
+
+  return invoicedOrders.map((order) => {
+    const billing = order.billingCustomer;
+    const shipping = order.shippingCustomer || billing;
+    const invoice = order.invoice!;
+
+    const record: Record<string, unknown> = {
+      InvoiceNumber: invoice.invoiceNumber,
+      OrderNumber: order.orderNumber,
+      InvoiceCreatedDate: invoice.invoiceCreatedDate.toISOString().split("T")[0],
+      InvoiceDueDate: invoice.invoiceDueDate.toISOString().split("T")[0],
+      InvoiceAmount: invoice.invoiceAmount,
+      FreightAmount: invoice.freightAmount,
+      TaxAmount: invoice.taxAmount,
+
+      // Billing
+      BillingCustomerCode: billing.customerCode,
+      BillingCustomerName: billing.name,
+      BillingAddress1: billing.address1,
+      BillingAddress2: billing.address2,
+      BillingCity: billing.city,
+      BillingState: billing.state,
+      BillingZip: billing.zip,
+      BillingCountry: billing.country,
+      BillingTelephone: billing.phoneNumber,
+      BillingFaxNumber: billing.faxNumber,
+      BillingDBA: billing.dba,
+
+      // Shipping
+      ShippingCustomerCode: shipping.customerCode,
+      ShippingCustomerName: shipping.name,
+      ShippingAddress1: shipping.address1,
+      ShippingAddress2: shipping.address2,
+      ShippingCity: shipping.city,
+      ShippingState: shipping.state,
+      ShippingZip: shipping.zip,
+      ShippingCountry: shipping.country,
+      ShippingTelephone: shipping.phoneNumber,
+      ShippingFaxNumber: shipping.faxNumber,
+      ShippingDBA: shipping.dba,
+
+      // Order details
+      SalesPersonCode: billing.salesPersonCode,
+      TermsCode: billing.termsCode,
+      DivisionCode: billing.divisionCode,
+      BrandCode: billing.brandCode || "CC",
+      ShippingMethodCode: order.shippingMethodCode,
+
+      // Line items
+      InvoiceItems: order.lines.map((line) => ({
+        InvoiceLineNumber: String(line.lineNumber),
+        ProductNumber: line.productNumber,
+        ProductName: line.productName,
+        ColorCode: line.colorCode,
+        ColorDescription: line.colorDescription,
+        GenderCode: line.genderCode,
+        GenderDescription: line.genderDescription,
+        SeasonCode: line.seasonCode,
+        SeasonDescription: line.seasonDescription,
+        ProductCategoryCode: line.categoryCode,
+        ProductCategoryDescription: line.categoryDescription,
+        SizeScaleCode: line.sizeScaleCode,
+        DivisionCode: line.divisionCode,
+        DivisionDescription: line.divisionDescription,
+        BrandCode: line.brandCode,
+        StatusCode: line.statusCode,
+        InvoiceItemSizes: [
+          {
+            SizeCode: line.sizeCode,
+            InvoicedQuantity: line.invoicedQuantity,
+            SizeInvoicedPrice: line.sellPrice,
+            StatusCode: line.statusCode,
+          },
+        ],
+      })),
+    };
+
+    if (invoice.invoiceSentDate) {
+      record.InvoiceSentDate = invoice.invoiceSentDate.toISOString().split("T")[0];
+    }
+    if (order.purchaseOrder) record.PurchaseOrder = order.purchaseOrder;
+    if (order.shippingCustomer?.storeCode) record.StoreNumber = order.shippingCustomer.storeCode;
+
+    // Tracking numbers
+    if (order.trackingNumber && order.shippingCarrierName) {
+      record.TrackingNumbers = [
+        {
+          ShippingCarrierName: order.shippingCarrierName,
+          TrackingNumber: order.trackingNumber,
+        },
+      ];
+    }
+
+    return record;
+  });
+}
 export async function syncToRepSpark(
   client: Client,
   environment: Environment,
-  entityType: "option" | "sizing" | "product" | "inventory" | "customer" | "productgroup",
+  entityType: "option" | "sizing" | "product" | "inventory" | "customer" | "productgroup" | "orderreport" | "invoicereport",
   payload: Record<string, unknown>[],
   syncMode: "Full" | "Delta" = "Full"
 ): Promise<SyncResult> {
