@@ -88,7 +88,7 @@ case "productgroups": {
             enabled: true,
           },
           include: {
-            baseProduct: true,
+            product: true,
             decoration: true,
           },
         });
