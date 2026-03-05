@@ -8,6 +8,7 @@ const ENTITIES = [
   { key: "options", name: "Options", description: "Lookup tables (colors, seasons, etc.)" },
   { key: "sizing", name: "Sizing", description: "Size scales and sizes" },
   { key: "products", name: "Products", description: "Product catalog" },
+  { key: "productgroups", name: "Product Groups", description: "Licensed configurations (finished goods)" },
   { key: "customers", name: "Customers", description: "Customer accounts" },
   { key: "inventory", name: "Inventory", description: "Stock levels" },
   { key: "images", name: "Images", description: "Product images to SFTP" },
