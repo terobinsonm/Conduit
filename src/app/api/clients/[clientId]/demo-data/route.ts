@@ -127,32 +127,32 @@ export async function POST(
     });
     const brandPrefix = client?.slug?.toUpperCase().slice(0, 2) || "CC";
 
-    // Helper functions
-    function randomInt(min: number, max: number): number {
+  // Helper functions
+    const randomInt = (min: number, max: number): number => {
       return Math.floor(Math.random() * (max - min + 1)) + min;
-    }
+    };
 
-    function randomElement<T>(arr: T[]): T {
+    const randomElement = <T>(arr: T[]): T => {
       return arr[Math.floor(Math.random() * arr.length)];
-    }
+    };
 
-    function randomDate(daysBack: number): Date {
+    const randomDate = (daysBack: number): Date => {
       const date = new Date(now);
       // Weight toward more recent dates
       const weight = Math.random() * Math.random(); // Quadratic bias toward recent
       const daysAgo = Math.floor(weight * daysBack);
       date.setDate(date.getDate() - daysAgo);
       return date;
-    }
+    };
 
-    function pickStatus(): string {
+    const pickStatus = (): string => {
       const rand = Math.random();
       if (rand < statusDistribution.open) return "OPEN";
       if (rand < statusDistribution.open + statusDistribution.shipped) return "SHIPPED";
       return "INVOICED";
-    }
+    };
 
-    function generateUPSTracking(): string {
+    const generateUPSTracking = (): string => {
       const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
       let tracking = "1Z";
       for (let i = 0; i < 6; i++) {
@@ -162,30 +162,30 @@ export async function POST(
         tracking += Math.floor(Math.random() * 10);
       }
       return tracking;
-    }
+    };
 
-    function generateFedExTracking(): string {
+    const generateFedExTracking = (): string => {
       let tracking = "";
       for (let i = 0; i < 15; i++) {
         tracking += Math.floor(Math.random() * 10);
       }
       return tracking;
-    }
+    };
 
-    function getSizesForProduct(product: typeof products[0]): string[] {
+    const getSizesForProduct = (product: typeof products[0]): string[] => {
       if (product.options) {
         try {
           const opts = JSON.parse(product.options) as { name: string; values: string[]; isProductLevel: boolean }[];
           const sizeOpts = opts.filter((o) => !o.isProductLevel);
           if (sizeOpts.length > 0) {
             // Generate combinations
-            function cartesian(arrays: string[][]): string[] {
+            const cartesian = (arrays: string[][]): string[] => {
               if (arrays.length === 0) return [];
               if (arrays.length === 1) return arrays[0];
               return arrays.reduce((acc, curr) =>
                 acc.flatMap((a) => curr.map((c) => `${a} / ${c}`))
               );
-            }
+            };
             const valueArrays = sizeOpts.map((o) => o.values);
             return cartesian(valueArrays);
           }
@@ -195,7 +195,7 @@ export async function POST(
       }
       // Default sizes if no options defined
       return ["S", "M", "L", "XL"];
-    }
+    };
 
     // Generate orders
     const ordersToCreate: {
