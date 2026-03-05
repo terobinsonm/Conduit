@@ -8,6 +8,8 @@ import {
   transformInventory,
   transformCustomers,
   transformProductGroups,
+  transformOrderReports,
+  transformInvoiceReports,
 } from "@/lib/repspark";
 
 export async function POST(
@@ -113,6 +115,39 @@ case "productgroups": {
         break;
       }
 
+        case "orderreports": {
+        const orders = await prisma.demoOrder.findMany({
+          where: { clientId: params.clientId },
+          include: {
+            billingCustomer: true,
+            shippingCustomer: true,
+            lines: true,
+            invoice: true,
+          },
+        });
+        const payload = transformOrderReports(orders);
+        result = await syncToRepSpark(client, environment, "orderreport", payload);
+        break;
+      }
+
+      case "invoicereports": {
+        const orders = await prisma.demoOrder.findMany({
+          where: { 
+            clientId: params.clientId,
+            statusCode: "INVOICED",
+          },
+          include: {
+            billingCustomer: true,
+            shippingCustomer: true,
+            lines: true,
+            invoice: true,
+          },
+        });
+        const payload = transformInvoiceReports(orders);
+        result = await syncToRepSpark(client, environment, "invoicereport", payload);
+        break;
+      }
+        
       default:
         return NextResponse.json(
           { success: false, error: `Unknown entity: ${entity}` },
