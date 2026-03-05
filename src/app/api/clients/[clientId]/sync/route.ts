@@ -7,6 +7,7 @@ import {
   transformProducts,
   transformInventory,
   transformCustomers,
+  transformProductGroups,
 } from "@/lib/repspark";
 
 export async function POST(
@@ -74,10 +75,27 @@ export async function POST(
         break;
       }
 
+      case "productgroups": {
+        const configs = await prisma.licensedConfiguration.findMany({
+          where: { 
+            baseProduct: { clientId: params.clientId },
+            enabled: true,
+          },
+          include: {
+            baseProduct: true,
+            decoration: true,
+          },
+        });
+        const payload = transformProductGroups(configs);
+        result = await syncToRepSpark(client, environment, "productgroup", payload);
+        break;
+      }
+
       case "images": {
         const baseUrl = process.env.VERCEL_URL
           ? `https://${process.env.VERCEL_URL}`
           : request.nextUrl.origin;
+
         const imagesResponse = await fetch(
           `${baseUrl}/api/clients/${params.clientId}/sync/images`,
           {
@@ -96,20 +114,20 @@ export async function POST(
         );
     }
 
-// Log the sync result
-await prisma.syncLog.create({
-  data: {
-    client: { connect: { id: params.clientId } },
-    entityType,
-    environment,
-    syncMode: "Full",
-    recordCount: result.recordCount || 0,
-    status: result.success ? "success" : "failed",
-    errorMessage: result.error || null,
-    errorDetails: result.details ? JSON.stringify(result.details) : null,
-    triggeredBy: "manual",
-  },
-});
+    // Log the sync result
+    await prisma.syncLog.create({
+      data: {
+        client: { connect: { id: params.clientId } },
+        entityType,
+        environment,
+        syncMode: "Full",
+        recordCount: result.recordCount || 0,
+        status: result.success ? "success" : "failed",
+        errorMessage: result.error || null,
+        errorDetails: result.details ? JSON.stringify(result.details) : null,
+        triggeredBy: "manual",
+      },
+    });
 
     return NextResponse.json(result);
   } catch (error) {
