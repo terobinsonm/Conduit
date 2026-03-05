@@ -21,7 +21,7 @@ interface LicensedConfigWithRelations {
   dateRangeBegin: Date | null;
   dateRangeEnd: Date | null;
   enabled: boolean;
-  baseProduct: Product;
+  product: Product;
   decoration: Product;
 }
 
@@ -207,7 +207,7 @@ export function transformProductGroups(
   configs: LicensedConfigWithRelations[]
 ): Record<string, unknown>[] {
   return configs.map((config) => {
-    const baseProduct = config.baseProduct;
+    const baseProduct = config.product;  // Changed from config.baseProduct
     const logoProduct = config.decoration;
 
     // Build the ProductGroup
