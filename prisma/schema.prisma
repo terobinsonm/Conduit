@@ -46,6 +46,8 @@ model Client {
   images              ProductImage[]
   syncSchedule        SyncSchedule?
   licensedConfigurations LicensedConfiguration[]
+  demoOrders          DemoOrder[]
+  demoInvoices        DemoInvoice[]
   
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
@@ -196,6 +198,7 @@ model Product {
   
   inventory            Inventory[]
   images               ProductImage[]
+  demoOrderLines       DemoOrderLine[]
   
   // Licensed configuration relations
   licensedConfigs      LicensedConfiguration[] @relation("ProductLicensedConfigs")
@@ -313,6 +316,9 @@ model Customer {
   paymentsVisibility   String?
   referenceNumber      String?
   
+  billingOrders        DemoOrder[] @relation("BillingOrders")
+  shippingOrders       DemoOrder[] @relation("ShippingOrders")
+  
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
   
@@ -364,6 +370,106 @@ model LicensedConfiguration {
   @@index([clientId])
   @@index([productId])
   @@index([decorationId])
+}
+
+// ============================================================================
+// DEMO DATA GENERATION
+// ============================================================================
+
+model DemoOrder {
+  id                   String    @id @default(cuid())
+  clientId             String
+  client               Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  
+  orderNumber          String
+  orderDate            DateTime
+  entryDate            DateTime
+  
+  billingCustomerId    String
+  billingCustomer      Customer  @relation("BillingOrders", fields: [billingCustomerId], references: [id], onDelete: Cascade)
+  
+  shippingCustomerId   String?
+  shippingCustomer     Customer? @relation("ShippingOrders", fields: [shippingCustomerId], references: [id])
+  
+  purchaseOrder        String?
+  statusCode           String    // OPEN, SHIPPED, INVOICED
+  
+  shippingMethodCode   String?
+  shippingCarrierName  String?
+  trackingNumber       String?
+  
+  lines                DemoOrderLine[]
+  invoice              DemoInvoice?
+  
+  createdAt            DateTime  @default(now())
+  
+  @@unique([clientId, orderNumber])
+  @@index([clientId])
+  @@index([billingCustomerId])
+  @@index([shippingCustomerId])
+}
+
+model DemoOrderLine {
+  id                  String    @id @default(cuid())
+  orderId             String
+  order               DemoOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  
+  lineNumber          Int
+  productId           String
+  product             Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  
+  productNumber       String
+  productName         String?
+  colorCode           String?
+  colorDescription    String?
+  genderCode          String?
+  genderDescription   String?
+  seasonCode          String?
+  seasonDescription   String?
+  categoryCode        String?
+  categoryDescription String?
+  sizeScaleCode       String?
+  divisionCode        String?
+  divisionDescription String?
+  brandCode           String    @default("CC")
+  
+  sizeCode            String
+  orderedQuantity     Int
+  invoicedQuantity    Int       @default(0)
+  
+  retailPrice         Float
+  wholesalePrice      Float
+  sellPrice           Float
+  cost                Float
+  
+  statusCode          String
+  
+  @@index([orderId])
+  @@index([productId])
+}
+
+model DemoInvoice {
+  id                 String    @id @default(cuid())
+  clientId           String
+  client             Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  
+  invoiceNumber      String
+  orderId            String    @unique
+  order              DemoOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  
+  invoiceCreatedDate DateTime
+  invoiceSentDate    DateTime?
+  invoiceDueDate     DateTime
+  
+  invoiceAmount      Float
+  freightAmount      Float     @default(0)
+  taxAmount          Float     @default(0)
+  
+  createdAt          DateTime  @default(now())
+  
+  @@unique([clientId, invoiceNumber])
+  @@index([clientId])
+  @@index([orderId])
 }
 
 // ============================================================================
