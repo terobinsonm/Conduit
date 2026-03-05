@@ -416,9 +416,9 @@ export function transformOrderReports(
       BrandCode: billing.brandCode || "CC",
 
       // Line items
-      OrderItems: order.lines.map((line) => ({
-        OrderLineNumber: String(line.lineNumber),
-        ProductNumber: line.productNumber,
+OrderItems: order.lines.map((line) => ({
+  LineNumber: String(line.lineNumber),  // Changed from OrderLineNumber
+  ProductNumber: line.productNumber,
         ProductName: line.productName,
         ColorCode: line.colorCode,
         ColorDescription: line.colorDescription,
