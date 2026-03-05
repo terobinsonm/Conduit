@@ -11,6 +11,8 @@ const ENTITIES = [
   { key: "productgroups", name: "Product Groups", description: "Licensed configurations (finished goods)" },
   { key: "customers", name: "Customers", description: "Customer accounts" },
   { key: "inventory", name: "Inventory", description: "Stock levels" },
+  { key: "orderreports", name: "Order Reports", description: "Demo order data" },
+  { key: "invoicereports", name: "Invoice Reports", description: "Demo invoice data" },
   { key: "images", name: "Images", description: "Product images to SFTP" },
 ];
 
