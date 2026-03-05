@@ -75,10 +75,17 @@ export async function POST(
         break;
       }
 
-      case "productgroups": {
+case "productgroups": {
+        // First get all product IDs for this client
+        const clientProducts = await prisma.product.findMany({
+          where: { clientId: params.clientId },
+          select: { id: true },
+        });
+        const productIds = clientProducts.map(p => p.id);
+
         const configs = await prisma.licensedConfiguration.findMany({
           where: { 
-            baseProduct: { clientId: params.clientId },
+            baseProductId: { in: productIds },
             enabled: true,
           },
           include: {
