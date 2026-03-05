@@ -8,6 +8,23 @@ interface RepSparkConfig {
   environmentKey: string;
 }
 
+interface LicensedConfigWithRelations {
+  id: string;
+  placement: string;
+  colorChoice: string;
+  finishedGoodName: string | null;
+  finishedGoodImageUrl: string | null;
+  finishedGoodShortDesc: string | null;
+  finishedGoodLongDesc: string | null;
+  wholesalePrice: number | null;
+  retailPrice: number | null;
+  dateRangeBegin: Date | null;
+  dateRangeEnd: Date | null;
+  enabled: boolean;
+  baseProduct: Product;
+  decoration: Product;
+}
+
 function getApiConfig(client: Client, environment: Environment): RepSparkConfig | null {
   const envMap = {
     dev: {
@@ -186,6 +203,85 @@ export function transformCustomers(customers: Customer[]): Record<string, unknow
   });
 }
 
+export function transformProductGroups(
+  configs: LicensedConfigWithRelations[]
+): Record<string, unknown>[] {
+  return configs.map((config) => {
+    const baseProduct = config.baseProduct;
+    const logoProduct = config.decoration;
+
+    // Build the ProductGroup
+    const productGroup: Record<string, unknown> = {
+      Products: [
+        // Base product (Type 2)
+        {
+          ProductNumber: baseProduct.productNumber,
+          ProductType: 2,
+          ...(baseProduct.colorCode && { ColorCode: baseProduct.colorCode }),
+          ...(baseProduct.genderCode && { GenderCode: baseProduct.genderCode }),
+          ...(baseProduct.seasonCode && { SeasonCode: baseProduct.seasonCode }),
+        },
+        // Logo product (Type 4) with Extensions
+        {
+          ProductNumber: logoProduct.productNumber,
+          ProductType: 4,
+          ...(logoProduct.wholesalePrice && { WholesalePrice: logoProduct.wholesalePrice }),
+          Extensions: [
+            { ExtensionType: "Placement", Value: config.placement },
+            { ExtensionType: "ColorChoice", Value: config.colorChoice },
+          ],
+        },
+      ],
+      Enabled: config.enabled,
+    };
+
+    // Finished good display name
+    if (config.finishedGoodName) {
+      productGroup.ProductName = config.finishedGoodName;
+    } else {
+      // Auto-generate: "Base Product Name - Team Name"
+      const baseName = baseProduct.productName || baseProduct.productNumber;
+      const teamName = logoProduct.teamName || logoProduct.productName || logoProduct.productNumber;
+      productGroup.ProductName = `${baseName} - ${teamName}`;
+    }
+
+    // Optional finished good fields
+    if (config.finishedGoodShortDesc) {
+      productGroup.ShortDescription = config.finishedGoodShortDesc;
+    }
+    if (config.finishedGoodLongDesc) {
+      productGroup.LongDescription = config.finishedGoodLongDesc;
+    }
+    if (config.finishedGoodImageUrl) {
+      productGroup.ImageURL = config.finishedGoodImageUrl;
+    }
+
+    // Price overrides (if specified, otherwise RepSpark calculates base + logo)
+    if (config.wholesalePrice !== null) {
+      productGroup.WholesalePrice = config.wholesalePrice;
+    }
+    if (config.retailPrice !== null) {
+      productGroup.RetailPrice = config.retailPrice;
+    }
+
+    // Date range availability
+    if (config.dateRangeBegin) {
+      productGroup.DateRangeBegin = config.dateRangeBegin.toISOString().split("T")[0];
+    }
+    if (config.dateRangeEnd) {
+      productGroup.DateRangeEnd = config.dateRangeEnd.toISOString().split("T")[0];
+    }
+
+    // Inherit some codes from base product
+    if (baseProduct.brandCode) productGroup.BrandCode = baseProduct.brandCode;
+    if (baseProduct.divisionCode) productGroup.DivisionCode = baseProduct.divisionCode;
+    if (baseProduct.seasonCode) productGroup.SeasonCode = baseProduct.seasonCode;
+    if (baseProduct.categoryCode) productGroup.CategoryCode = baseProduct.categoryCode;
+
+    return productGroup;
+  });
+}
+
 // ============================================================================
 // API CALLS
 // ============================================================================
@@ -201,7 +297,7 @@ export interface SyncResult {
 export async function syncToRepSpark(
   client: Client,
   environment: Environment,
-  entityType: "option" | "sizing" | "product" | "inventory" | "customer",
+  entityType: "option" | "sizing" | "product" | "inventory" | "customer" | "productgroup",
   payload: Record<string, unknown>[],
   syncMode: "Full" | "Delta" = "Full"
 ): Promise<SyncResult> {
