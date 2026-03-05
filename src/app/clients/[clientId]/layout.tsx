@@ -16,6 +16,7 @@ import {
   ChevronLeft,
   History,
   Palette,
+  Sparkles,
 } from "lucide-react";
 
 interface ClientLayoutProps {
@@ -46,19 +47,20 @@ export default async function ClientLayout({ children, params }: ClientLayoutPro
 
   const { client } = membership;
 
-  const navigation = [
-    { name: "Dashboard", href: `/clients/${client.id}`, icon: LayoutDashboard },
-    { name: "Products", href: `/clients/${client.id}/products`, icon: Package },
-    { name: "Decorations", href: `/clients/${client.id}/decorations`, icon: Palette },
-    { name: "Options", href: `/clients/${client.id}/options`, icon: List },
-    { name: "Size Scales", href: `/clients/${client.id}/sizing`, icon: Ruler },
-    { name: "Images", href: `/clients/${client.id}/images`, icon: Image },
-    { name: "Inventory", href: `/clients/${client.id}/inventory`, icon: Layers },
-    { name: "Customers", href: `/clients/${client.id}/customers`, icon: Users },
-    { name: "Sync", href: `/clients/${client.id}/sync`, icon: RefreshCw },
-    { name: "Settings", href: `/clients/${client.id}/settings`, icon: Settings },
-{ name: "Sync Logs", href: `/clients/${client.id}/sync-logs`, icon: History }
-  ];
+const navigation = [
+  { name: "Dashboard", href: `/clients/${client.id}`, icon: LayoutDashboard },
+  { name: "Products", href: `/clients/${client.id}/products`, icon: Package },
+  { name: "Decorations", href: `/clients/${client.id}/decorations`, icon: Palette },
+  { name: "Options", href: `/clients/${client.id}/options`, icon: List },
+  { name: "Size Scales", href: `/clients/${client.id}/sizing`, icon: Ruler },
+  { name: "Images", href: `/clients/${client.id}/images`, icon: Image },
+  { name: "Inventory", href: `/clients/${client.id}/inventory`, icon: Layers },
+  { name: "Customers", href: `/clients/${client.id}/customers`, icon: Users },
+  { name: "Demo Data", href: `/clients/${client.id}/demo-data`, icon: Sparkles },
+  { name: "Sync", href: `/clients/${client.id}/sync`, icon: RefreshCw },
+  { name: "Sync Logs", href: `/clients/${client.id}/sync-logs`, icon: History },
+  { name: "Settings", href: `/clients/${client.id}/settings`, icon: Settings },
+];
 
   return (
     <div className="min-h-screen bg-gray-50">
